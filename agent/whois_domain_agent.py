@@ -1,14 +1,12 @@
 """Whois Domain Agent: Agent responsible for retrieving WHOIS information of a domain."""
-import json
 import logging
 
 from ostorlab.agent import agent
 from ostorlab.agent import message as msg
-from ostorlab.agent.kb import kb
-from ostorlab.agent.mixins import agent_report_vulnerability_mixin
 from ostorlab.agent import agent, definitions as agent_definitions
 from ostorlab.agent.mixins import agent_persist_mixin as persist_mixin
 from ostorlab.runtimes import definitions as runtime_definitions
+
 from agent import result_parser
 
 from rich import logging as rich_logging
@@ -23,17 +21,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-VULNZ_TITLE = 'WHOIS domain information'
-VULNZ_ENTRY_RISK_RATING = 'INFO'
-VULNZ_SHORT_DESCRIPTION = 'WHOIS information found.'
-VULNZ_DESCRIPTION = """Lists WHOIS domain information including the domain name, registrar, creation date,
-updated date, expiration date, emails, and organization. Other information includes the city, zipcode,
-country, state, DNSSEC, address, name, status, and name servers."""
-
 LIB_SELECTOR = 'v3.asset.domain_name.whois'
 
-class AgentWhoisDomain(agent.Agent, agent_report_vulnerability_mixin.AgentReportVulnMixin,
-        persist_mixin.AgentPersistMixin):
+class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
     """Whois domain scanner implementation for ostorlab. using ostorlab python sdk.
     For more information visit https://github.com/Ostorlab/ostorlab."""
 
@@ -51,7 +41,7 @@ class AgentWhoisDomain(agent.Agent, agent_report_vulnerability_mixin.AgentReport
         """
         domain = message.data['name']
 
-        if (isinstance(domain, list)):
+        if isinstance(domain, list):
             domain = domain[0]
 
         logger.info('Processing message of selector : %s', message.selector)
@@ -59,7 +49,7 @@ class AgentWhoisDomain(agent.Agent, agent_report_vulnerability_mixin.AgentReport
             logger.info('target %s/ was processed before, exiting', domain)
             return
         output = self._start_scan(domain)
-        self._emit_report_result(whois_scan_output=output)
+        self._emit_result(whois_scan_output=output)
 
     def _start_scan(self, domain_name: str) -> whois.parser.WhoisCom:
         """Run a whois scan using python subprocess.
@@ -72,30 +62,13 @@ class AgentWhoisDomain(agent.Agent, agent_report_vulnerability_mixin.AgentReport
         logger.info('Done scanning %s .', domain_name)
         return whois_output
 
-    def _emit_report_result(self, whois_scan_output: whois.parser.WhoisCom) -> None:
+    def _emit_result(self, whois_scan_output: whois.parser.WhoisCom) -> None:
         """After the scan is done, emit the scan findings."""
 
         logger.info('Reporting results for %s',
                     whois_scan_output.get('domain_name'))
         parsed_results = result_parser.parse_results(whois_scan_output)
-
         self.emit(selector=LIB_SELECTOR, data=parsed_results)
-        self.report_vulnerability(
-            entry=kb.Entry(
-                title=VULNZ_TITLE,
-                risk_rating=VULNZ_ENTRY_RISK_RATING,
-                short_description=VULNZ_SHORT_DESCRIPTION,
-                description=VULNZ_DESCRIPTION,
-                references={},
-                security_issue=True,
-                privacy_issue=False,
-                has_public_exploit=False,
-                targeted_by_malware=False,
-                targeted_by_ransomware=False,
-                targeted_by_nation_state=False
-            ),
-            technical_detail=f'```json\n{json.dumps(parsed_results, indent = 4)}\n```',
-            risk_rating=agent_report_vulnerability_mixin.RiskRating.INFO)
 
 if __name__ == '__main__':
     logger.info('Whois Domain agent starting ...')

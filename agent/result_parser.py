@@ -34,11 +34,11 @@ def get_isoformat(date_name: Union[datetime.datetime, List[datetime.datetime]]) 
        A list of ISO date formats.
     """
     if date_name is None:
-       return ''
+        return ''
     elif isinstance(date_name, list):
-       return [date_obj.isoformat() for date_obj in date_name]
+        return [date_obj.isoformat() for date_obj in date_name]
     else:
-       return [date_name.isoformat()]
+        return [date_name.isoformat()]
 
 def get_list_from_string(scan_output_value: Union[str, List[str]]) -> Union[str, List[str]]:
     """Checks if the value of an attribute is a string and puts it in a list.
@@ -50,6 +50,6 @@ def get_list_from_string(scan_output_value: Union[str, List[str]]) -> Union[str,
        A list from the scan_output_value.
     """
     if isinstance(scan_output_value, str):
-       return [scan_output_value]
+        return [scan_output_value]
     else:
-       return scan_output_value
+        return scan_output_value

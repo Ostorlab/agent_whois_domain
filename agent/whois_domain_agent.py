@@ -1,7 +1,6 @@
 """Whois Domain Agent: Agent responsible for retrieving WHOIS information of a domain."""
 import json
 import logging
-from typing import List, Dict
 
 from ostorlab.agent import agent
 from ostorlab.agent import message as msg

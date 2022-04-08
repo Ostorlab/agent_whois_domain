@@ -1,4 +1,4 @@
-<h1 align="center">Agent Whatweb</h1>
+<h1 align="center">Agent Whois</h1>
 
 <p align="center">
 <img src="https://img.shields.io/badge/License-Apache_2.0-brightgreen.svg">
@@ -7,7 +7,7 @@
 <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg">
 </p>
 
-_Whatweb is a web technology fingerprinter capable of detecting CMS, blogging platform, analytics pacakges, JS libraries, web servier and embeded devices._
+_Agent responsible for retrieving WHOIS information of a domain such as it's name servers, contact information, registrar, and address._
 
 ---
 
@@ -29,7 +29,7 @@ For more information, please refer to the [Ostorlab Documentation](https://githu
 
 ## Usage
 
-Agent Whatweb can be installed directly from the ostorlab agent store or built from this repository.
+Agent Whois can be installed directly from the ostorlab agent store or built from this repository.
 
  ### Install directly from ostorlab agent store
 

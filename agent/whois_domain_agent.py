@@ -24,8 +24,7 @@ logger = logging.getLogger(__name__)
 LIB_SELECTOR = 'v3.asset.domain_name.whois'
 
 class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
-    """Whois domain scanner implementation for ostorlab. using ostorlab python sdk.
-    For more information visit https://github.com/Ostorlab/ostorlab."""
+    """Whois domain scanner implementation for ostorlab. using ostorlab python sdk."""
 
     def __init__(self, agent_definition: agent_definitions.AgentDefinition,
                  agent_settings: runtime_definitions.AgentSettings) -> None:
@@ -48,26 +47,26 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
         if not self.set_add('agent_whois_domain_asset', domain):
             logger.info('target %s/ was processed before, exiting', domain)
             return
-        output = self._start_scan(domain)
-        self._emit_result(whois_scan_output=output)
+        scan_output = self._fetch_whois(domain)
+        self._emit_result(scan_output)
 
-    def _start_scan(self, domain_name: str) -> whois.parser.WhoisCom:
+    def _fetch_whois(self, domain_name: str) -> whois.parser.WhoisCom:
         """Run a whois scan using python subprocess.
 
         Args:
             domain_name: Target domain to lookup.
         """
-        logger.info('Staring a new scan for %s .', domain_name)
+        logger.info('staring a new scan for %s .', domain_name)
         whois_output = whois.whois(domain_name)
-        logger.info('Done scanning %s .', domain_name)
+        logger.info('done scanning %s .', domain_name)
         return whois_output
 
-    def _emit_result(self, whois_scan_output: whois.parser.WhoisCom) -> None:
+    def _emit_result(self, scan_output: whois.parser.WhoisCom) -> None:
         """After the scan is done, emit the scan findings."""
 
-        logger.info('Reporting results for %s',
-                    whois_scan_output.get('domain_name'))
-        parsed_results = result_parser.parse_results(whois_scan_output)
+        logger.info('emitting results for %s',
+                    scan_output.get('domain_name'))
+        parsed_results = result_parser.parse_results(scan_output)
         self.emit(selector=LIB_SELECTOR, data=parsed_results)
 
 if __name__ == '__main__':

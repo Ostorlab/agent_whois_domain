@@ -44,7 +44,7 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
 
         logger.info('Processing message of selector : %s', message.selector)
         if not self.set_add('agent_whois_domain_asset', domain):
-            logger.info('target %s/ was processed before, exiting', domain)
+            logger.info('target %s was processed before, exiting', domain)
             return
         scan_output = self._fetch_whois(domain)
         self._emit_result(scan_output)

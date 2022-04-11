@@ -12,7 +12,7 @@ _Agent responsible for retrieving WHOIS information of a domain such as it's nam
 ---
 
 <p align="center">
-<img src="https://github.com/Ostorlab/agent_whois_domain/blob/whois_domain_agent/images/logo.png" alt="agent-whois-domain" />
+<img src="https://github.com/Ostorlab/agent_whois_domain/blob/main/images/logo.png" alt="agent-whois-domain" />
 </p>
 
 This repository is an implementation of [Ostorlab Agent](https://pypi.org/project/ostorlab/) for [python-whois](https://pypi.org/project/python-whois/).

@@ -2,34 +2,34 @@
 import datetime
 
 SCAN_OUTPUT = {
-    "domain_name": "test.ostorlab.co",
-    "registrar": "Tucows Domains Inc.",
-    "whois_server": "whois.opensrs.net",
-    "referral_url": None,
-    "updated_date": datetime.datetime.fromisoformat("2018-12-08 10:36:41"),
-    "creation_date": datetime.datetime.fromisoformat("2015-01-27 22:03:32"),
-    "expiration_date": datetime.datetime.fromisoformat("2023-01-26 23:59:59"),
-    "name_servers": [
-        "nirvana.easydns.net",
-        "motorhead.easydns.org",
-        "rush.easydns.com"
+    'domain_name': 'test.ostorlab.co',
+    'registrar': 'Tucows Domains Inc.',
+    'whois_server': 'whois.opensrs.net',
+    'referral_url': None,
+    'updated_date': datetime.datetime.fromisoformat('2018-12-08 10:36:41'),
+    'creation_date': datetime.datetime.fromisoformat('2015-01-27 22:03:32'),
+    'expiration_date': datetime.datetime.fromisoformat('2023-01-26 23:59:59'),
+    'name_servers': [
+        'nirvana.easydns.net',
+        'motorhead.easydns.org',
+        'rush.easydns.com'
     ],
-    "status": [
-        "clientUpdateProhibited https://icann.org/epp#clientUpdateProhibited",
-        "clientTransferProhibited https://icann.org/epp#clientTransferProhibited"
+    'status': [
+        'clientUpdateProhibited https://icann.org/epp#clientUpdateProhibited',
+        'clientTransferProhibited https://icann.org/epp#clientTransferProhibited'
     ],
-    "emails": [
-        "compliance@tucows.com",
-        "easydns@myprivacy.ca"
+    'emails': [
+        'compliance@tucows.com',
+        'easydns@myprivacy.ca'
     ],
-    "dnssec": "unsigned",
-    "name": "REDACTED FOR PRIVACY",
-    "org": "Contact Privacy Inc. Customer 0139267634",
-    "address": "REDACTED FOR PRIVACY",
-    "city": "REDACTED FOR PRIVACY",
-    "state": "ON",
-    "zipcode": "REDACTED FOR PRIVACY",
-    "country": "CA"
+    'dnssec': 'unsigned',
+    'name': 'REDACTED FOR PRIVACY',
+    'org': 'Contact Privacy Inc. Customer 0139267634',
+    'address': 'REDACTED FOR PRIVACY',
+    'city': 'REDACTED FOR PRIVACY',
+    'state': 'ON',
+    'zipcode': 'REDACTED FOR PRIVACY',
+    'country': 'CA'
 }
 
 def testAgentWhois_whenDomainNameAsset_RunScan(scan_message, test_agent,

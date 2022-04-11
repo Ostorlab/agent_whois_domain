@@ -50,7 +50,7 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
         self._emit_result(scan_output)
 
     def _fetch_whois(self, domain_name: str) -> whois.parser.WhoisCom:
-        """Run a whois scan using python subprocess.
+        """Collect whois data.
 
         Args:
             domain_name: Target domain to lookup.

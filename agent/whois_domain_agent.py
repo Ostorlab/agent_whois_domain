@@ -37,10 +37,9 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
         Args:
             message:  The message to process from ostorlab runtime.
         """
-        domain = message.data['name']
-
-        if isinstance(domain, list):
-            domain = domain[0]
+        domain = message.data.get('name')
+        if domain is None:
+            return
 
         logger.info('Processing message of selector : %s', message.selector)
         if not self.set_add('agent_whois_domain_asset', domain):
@@ -65,8 +64,8 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
 
         logger.info('emitting results for %s',
                     scan_output.get('domain_name'))
-        parsed_results = result_parser.parse_results(scan_output)
-        self.emit(selector=LIB_SELECTOR, data=parsed_results)
+        for m in result_parser.parse_results(scan_output):
+            self.emit(selector=LIB_SELECTOR, data=m)
 
 if __name__ == '__main__':
     logger.info('Whois Domain agent starting ...')

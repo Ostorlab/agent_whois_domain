@@ -43,7 +43,7 @@ def testAgentWhois_whenDomainNameAsset_RunScan(scan_message, test_agent,
     mock_whois.assert_called_once()
     assert len(agent_mock) > 0
     assert agent_mock[0].selector == 'v3.asset.domain_name.whois'
-    assert agent_mock[0].data['name'] == ['test.ostorlab.co']
+    assert agent_mock[0].data['name'] == 'test.ostorlab.co'
     assert agent_mock[0].data['updated_date'] == ['2018-12-08T10:36:41']
     assert agent_mock[0].data['creation_date'] == ['2015-01-27T22:03:32']
     assert agent_mock[0].data['expiration_date'] == ['2023-01-26T23:59:59']

@@ -1,5 +1,6 @@
 """Pytest fixture for the whois domain agent."""
 import pathlib
+import random
 
 import pytest
 
@@ -15,7 +16,7 @@ def scan_message():
     """
     selector = 'v3.asset.domain_name'
     msg_data = {
-        'name': 'test.ostorlab.co',
+        'name': 'medallia.com',
     }
     return message.Message.from_data(selector, data=msg_data)
 
@@ -31,5 +32,5 @@ def test_agent():
             bus_exchange_topic='NA',
             redis_url='redis://redis',
             args=[],
-            healthcheck_port=5301)
+            healthcheck_port=random.randint(4000, 5000))
         return whois_domain_agent.AgentWhoisDomain(definition, settings)

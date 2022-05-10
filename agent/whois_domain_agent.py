@@ -62,8 +62,7 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
     def _emit_result(self, scan_output: whois.parser.WhoisCom) -> None:
         """After the scan is done, emit the scan findings."""
 
-        logger.info('emitting results for %s',
-                    scan_output.get('domain_name'))
+        logger.info('emitting results for %s', scan_output.get('domain_name'))
         for m in result_parser.parse_results(scan_output):
             self.emit(selector=LIB_SELECTOR, data=m)
 

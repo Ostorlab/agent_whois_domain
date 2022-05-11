@@ -20,14 +20,15 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[Dict[str, Any]]:
     names = set(n.lower() for n in get_list_from_string(scan_output_dict.pop('domain_name', '')))
     contact_name = scan_output_dict.pop('name', '')
     for name in names:
-        output = copy.deepcopy(scan_output_dict)
-        output['updated_date'] = get_isoformat(scan_output_dict['updated_date'])
-        output['creation_date'] = get_isoformat(scan_output_dict['creation_date'])
-        output['expiration_date'] = get_isoformat(scan_output_dict['expiration_date'])
-        output['name'] = name
-        output['emails'] = get_list_from_string(scan_output_dict['emails'])
-        output['contact_name'] = contact_name
-        yield output
+        if name is not None:
+            output = copy.deepcopy(scan_output_dict)
+            output['updated_date'] = get_isoformat(scan_output_dict['updated_date'])
+            output['creation_date'] = get_isoformat(scan_output_dict['creation_date'])
+            output['expiration_date'] = get_isoformat(scan_output_dict['expiration_date'])
+            output['name'] = name
+            output['emails'] = get_list_from_string(scan_output_dict['emails'])
+            output['contact_name'] = contact_name
+            yield output
 
 
 def get_isoformat(date_name: Union[datetime.datetime, List[datetime.datetime]]) -> List[str]:
@@ -59,4 +60,4 @@ def get_list_from_string(scan_output_value: Union[str, List[str]]) -> List[str]:
     if isinstance(scan_output_value, str):
         return [scan_output_value]
     else:
-        return scan_output_value
+        return scan_output_value or []

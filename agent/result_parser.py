@@ -1,6 +1,5 @@
 """Module to parse whois_domain scan results."""
 import datetime
-import copy
 from typing import Any, Union, List, Dict, Iterator
 
 import whois

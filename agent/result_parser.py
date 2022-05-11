@@ -25,13 +25,13 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[Dict[str, Any]]:
     contact_name = scan_output_dict.pop('name', '')
     for name in names:
         output = copy.deepcopy(scan_output_dict)
-        output['updated_date'] = get_isoformat(scan_output_dict['updated_date'])
-        output['creation_date'] = get_isoformat(scan_output_dict['creation_date'])
-        output['expiration_date'] = get_isoformat(scan_output_dict['expiration_date'])
+        output['updated_date'] = get_isoformat(scan_output_dict.get('updated_date'))
+        output['creation_date'] = get_isoformat(scan_output_dict.get('creation_date'))
+        output['expiration_date'] = get_isoformat(scan_output_dict.get('expiration_date'))
         output['name'] = name
-        output['emails'] = get_list_from_string(scan_output_dict['emails'])
-        output['status'] = get_list_from_string(scan_output_dict['status'])
-        output['name_servers'] = get_list_from_string(scan_output_dict['name_servers'])
+        output['emails'] = get_list_from_string(scan_output_dict.get('emails'))
+        output['status'] = get_list_from_string(scan_output_dict.get('status'))
+        output['name_servers'] = get_list_from_string(scan_output_dict.get('name_servers'))
         output['contact_name'] = contact_name
         yield output
 

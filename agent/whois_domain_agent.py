@@ -1,6 +1,9 @@
 """Whois Domain Agent: Agent responsible for retrieving WHOIS information of a domain."""
 import logging
 
+from rich import logging as rich_logging
+import whois
+from whois import parser
 from ostorlab.agent import message as msg
 from ostorlab.agent import agent, definitions as agent_definitions
 from ostorlab.agent.mixins import agent_persist_mixin as persist_mixin
@@ -8,8 +11,6 @@ from ostorlab.runtimes import definitions as runtime_definitions
 
 from agent import result_parser
 
-from rich import logging as rich_logging
-import whois
 
 logging.basicConfig(
     format='%(message)s',
@@ -21,6 +22,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 LIB_SELECTOR = 'v3.asset.domain_name.whois'
+
 
 class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
     """Whois domain scanner implementation for ostorlab. using ostorlab python sdk."""
@@ -45,8 +47,11 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
         if not self.set_add('agent_whois_domain_asset', domain):
             logger.info('target %s was processed before, exiting', domain)
             return
-        scan_output = self._fetch_whois(domain)
-        self._emit_result(scan_output)
+        try:
+            scan_output = self._fetch_whois(domain)
+            self._emit_result(scan_output)
+        except parser.PywhoisError as e:
+            logger.error(e)
 
     def _fetch_whois(self, domain_name: str) -> whois.parser.WhoisCom:
         """Collect whois data.
@@ -65,6 +70,7 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
         logger.info('emitting results for %s', scan_output.get('domain_name'))
         for m in result_parser.parse_results(scan_output):
             self.emit(selector=LIB_SELECTOR, data=m)
+
 
 if __name__ == '__main__':
     logger.info('Whois Domain agent starting ...')

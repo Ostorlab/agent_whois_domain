@@ -1,9 +1,13 @@
 """Module to parse whois_domain scan results."""
 import datetime
-import copy
 from typing import Any, Union, List, Dict, Iterator
 
 import whois
+
+
+OPTIONAL_FIELDS = ['registrar', 'whois_server', 'referral_url',
+                   'dnssec', 'org', 'address', 'city',
+                   'state', 'zipcode', 'country']
 
 
 def parse_results(results: whois.parser.WhoisCom) -> Iterator[Dict[str, Any]]:
@@ -24,15 +28,17 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[Dict[str, Any]]:
 
     contact_name = scan_output_dict.pop('name', '')
     for name in names:
-        output = copy.deepcopy(scan_output_dict)
-        output['updated_date'] = get_isoformat(scan_output_dict.get('updated_date'))
-        output['creation_date'] = get_isoformat(scan_output_dict.get('creation_date'))
-        output['expiration_date'] = get_isoformat(scan_output_dict.get('expiration_date'))
-        output['name'] = name
-        output['emails'] = get_list_from_string(scan_output_dict.get('emails'))
-        output['status'] = get_list_from_string(scan_output_dict.get('status'))
-        output['name_servers'] = get_list_from_string(scan_output_dict.get('name_servers'))
-        output['contact_name'] = contact_name
+        output = {'updated_date': get_isoformat(scan_output_dict.get('updated_date')),
+                  'creation_date': get_isoformat(scan_output_dict.get('creation_date')),
+                  'expiration_date': get_isoformat(scan_output_dict.get('expiration_date')), 'name': name,
+                  'emails': get_list_from_string(scan_output_dict.get('emails')),
+                  'status': get_list_from_string(scan_output_dict.get('status')),
+                  'name_servers': get_list_from_string(scan_output_dict.get('name_servers')),
+                  'contact_name': contact_name,
+                  }
+        for field in OPTIONAL_FIELDS:
+            if field in scan_output_dict:
+                output[field] = scan_output_dict[field]
         yield output
 
 

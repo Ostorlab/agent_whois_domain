@@ -30,6 +30,8 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[Dict[str, Any]]:
         output['expiration_date'] = get_isoformat(scan_output_dict['expiration_date'])
         output['name'] = name
         output['emails'] = get_list_from_string(scan_output_dict['emails'])
+        output['status'] = get_list_from_string(scan_output_dict['status'])
+        output['name_servers'] = get_list_from_string(scan_output_dict['name_servers'])
         output['contact_name'] = contact_name
         yield output
 

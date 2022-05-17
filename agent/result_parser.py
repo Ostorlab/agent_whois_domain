@@ -30,11 +30,13 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[Dict[str, Any]]:
     for name in names:
         output = {'updated_date': get_isoformat(scan_output_dict.get('updated_date')),
                   'creation_date': get_isoformat(scan_output_dict.get('creation_date')),
-                  'expiration_date': get_isoformat(scan_output_dict.get('expiration_date')), 'name': name,
+                  'expiration_date': get_isoformat(scan_output_dict.get('expiration_date')),
+                  'name': name,
                   'emails': get_list_from_string(scan_output_dict.get('emails')),
                   'status': get_list_from_string(scan_output_dict.get('status')),
                   'name_servers': get_list_from_string(scan_output_dict.get('name_servers')),
                   'contact_name': contact_name,
+                  'dnssec': get_list_from_string(scan_output_dict.get('dnssec'))
                   }
         for field in OPTIONAL_FIELDS:
             if field in scan_output_dict:

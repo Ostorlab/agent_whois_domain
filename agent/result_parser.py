@@ -5,8 +5,7 @@ from typing import Any, Union, List, Dict, Iterator
 import whois
 
 
-OPTIONAL_FIELDS = ['registrar', 'whois_server', 'referral_url',
-                   'dnssec', 'org', 'address', 'city',
+OPTIONAL_FIELDS = ['registrar', 'whois_server', 'referral_url', 'org', 'address', 'city',
                    'state', 'zipcode', 'country']
 
 

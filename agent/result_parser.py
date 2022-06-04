@@ -55,13 +55,11 @@ def get_isoformat(date_name: Union[datetime.datetime, List[datetime.datetime]]) 
     if date_name is None:
         return []
     elif isinstance(date_name, list):
-        if any(not isinstance(date_obj, datetime.datetime) for date_obj in date_name):
-            return []
-        return [date_obj.isoformat() for date_obj in date_name]
-    else:
-        if not isinstance(date_name, datetime.datetime):
-            return []
+        return [date_obj.isoformat() for date_obj in date_name if isinstance(date_obj, datetime.datetime)]
+    elif isinstance(date_name, datetime.datetime):
         return [date_name.isoformat()]
+    else:
+        return []
 
 
 def get_list_from_string(scan_output_value: Union[str, List[str]]) -> List[str]:

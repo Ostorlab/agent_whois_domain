@@ -4,7 +4,7 @@ import logging
 from rich import logging as rich_logging
 import whois
 from whois import parser
-from ostorlab.agent import message as msg
+from ostorlab.agent.message import message as msg
 from ostorlab.agent import agent, definitions as agent_definitions
 from ostorlab.agent.mixins import agent_persist_mixin as persist_mixin
 from ostorlab.runtimes import definitions as runtime_definitions

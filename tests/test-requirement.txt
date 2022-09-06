@@ -3,3 +3,9 @@ pylint-quotes
 pytest
 pytest-cov
 pytest-mock
+types-click
+types-protobuf
+types-redis
+types-requests
+types-urllib3
+typing_extensions

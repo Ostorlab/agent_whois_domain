@@ -63,8 +63,9 @@ SCAN_OUTPUT_LIST = {
     'country': 'CA'
 }
 
+
 def testAgentWhois_whenDomainNameAsset_emitsMessages(scan_message, test_agent,
-    agent_persist_mock, mocker, agent_mock):
+                                                     agent_persist_mock, mocker, agent_mock):
     """Tests running the agent and emitting vulnerabilities."""
     del agent_persist_mock
 
@@ -82,7 +83,7 @@ def testAgentWhois_whenDomainNameAsset_emitsMessages(scan_message, test_agent,
 
 
 def testAgentWhois_whenDomainNameListAsset_emitsMessages(scan_message, test_agent,
-    agent_persist_mock, mocker, agent_mock):
+                                                         agent_persist_mock, mocker, agent_mock):
     """Tests running the agent and emitting vulnerabilities."""
     del agent_persist_mock
 
@@ -93,3 +94,21 @@ def testAgentWhois_whenDomainNameListAsset_emitsMessages(scan_message, test_agen
     assert len(agent_mock) > 0
     assert agent_mock[0].selector == 'v3.asset.domain_name.whois'
     assert agent_mock[0].data['name'] == 'test.ostorlab.co'
+
+
+def testAgentWhois_withBug_RunScan(bug_1750_message, test_agent,
+                                   agent_persist_mock, mocker, agent_mock):
+    """Tests running the agent and emitting vulnerabilities."""
+    del agent_persist_mock
+
+    test_agent.start()
+    test_agent.process(bug_1750_message)
+
+    assert len(agent_mock) > 0
+    assert agent_mock[0].selector == 'v3.asset.domain_name.whois'
+    assert agent_mock[0].data['name'] == '6sense.com'
+    assert agent_mock[0].data['updated_date'] == ['2022-07-16T12:55:30', '2022-07-16T07:55:28']
+    assert agent_mock[0].data['creation_date'] == ['1998-07-17T04:00:00', '1998-07-16T23:00:00']
+    assert agent_mock[0].data['expiration_date'] == ['2023-07-16T04:00:00', '2023-07-15T23:00:00']
+    assert agent_mock[0].data['emails'] == ['abuse@godaddy.com']
+    assert agent_mock[0].data['address'] == 'DomainsByProxy.com 2155 E Warner Rd'

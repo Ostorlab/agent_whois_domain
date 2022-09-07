@@ -2,7 +2,7 @@
 import datetime
 from typing import Any, Union, List, Dict, Iterator
 import whois
-
+from functools import reduce
 
 OPTIONAL_FIELDS = ['registrar', 'whois_server', 'referral_url', 'org', 'address', 'city',
                    'state', 'zipcode', 'country']
@@ -17,7 +17,6 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[Dict[str, Any]]:
     Returns:
        The parsed output of the whois_domain scan results.
     """
-
     scan_output_dict = dict(results)
     names = set()
     for name in get_list_from_string(scan_output_dict.pop('domain_name', '')):
@@ -26,9 +25,9 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[Dict[str, Any]]:
 
     contact_name = scan_output_dict.pop('name', '')
     for name in names:
-        output = {'updated_date': get_isoformat(scan_output_dict.get('updated_date', list())),
-                  'creation_date': get_isoformat(scan_output_dict.get('creation_date', list())),
-                  'expiration_date': get_isoformat(scan_output_dict.get('expiration_date', list())),
+        output = {'updated_date': get_isoformat(scan_output_dict.get('updated_date', [])),
+                  'creation_date': get_isoformat(scan_output_dict.get('creation_date', [])),
+                  'expiration_date': get_isoformat(scan_output_dict.get('expiration_date', [])),
                   'name': name,
                   'emails': get_list_from_string(scan_output_dict.get('emails', '')),
                   'status': get_list_from_string(scan_output_dict.get('status', '')),
@@ -38,7 +37,8 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[Dict[str, Any]]:
                   }
         for field in OPTIONAL_FIELDS:
             if field in scan_output_dict:
-                output[field] = scan_output_dict[field]
+                value = scan_output_dict[field]
+                output[field] = format_str(value) if value is not None else value
         yield output
 
 
@@ -74,3 +74,12 @@ def get_list_from_string(scan_output_value: Union[str, List[str]]) -> List[str]:
         return [scan_output_value]
     else:
         return scan_output_value or []
+
+
+def format_str(value: str | List[str]) -> str:
+    """concat string list to match proto format
+
+    """
+    if isinstance(value, str):
+        return value
+    return reduce((lambda x, y: ' '.join([x, y])), value)

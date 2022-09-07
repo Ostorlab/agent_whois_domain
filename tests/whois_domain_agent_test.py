@@ -1,6 +1,11 @@
 """Unittests for whois_domain agent."""
 import datetime
 
+from pytest_mock import plugin
+from typing import List, Any
+from ostorlab.agent.message import message
+from agent import whois_domain_agent
+
 SCAN_OUTPUT = {
     'domain_name': 'test.ostorlab.co',
     'registrar': 'Tucows Domains Inc.',
@@ -63,8 +68,12 @@ SCAN_OUTPUT_LIST = {
     'country': 'CA'
 }
 
-def testAgentWhois_whenDomainNameAsset_emitsMessages(scan_message, test_agent,
-    agent_persist_mock, mocker, agent_mock):
+
+def testAgentWhois_whenDomainNameAsset_emitsMessages(scan_message: message.Message,
+                                                     test_agent: whois_domain_agent.AgentWhoisDomain,
+                                                     agent_persist_mock: Any,
+                                                     mocker: plugin.MockerFixture,
+                                                     agent_mock: List[message.Message]) -> None:
     """Tests running the agent and emitting vulnerabilities."""
     del agent_persist_mock
 
@@ -81,8 +90,11 @@ def testAgentWhois_whenDomainNameAsset_emitsMessages(scan_message, test_agent,
     assert agent_mock[0].data['emails'] == ['compliance@tucows.com', 'easydns@myprivacy.ca']
 
 
-def testAgentWhois_whenDomainNameListAsset_emitsMessages(scan_message, test_agent,
-    agent_persist_mock, mocker, agent_mock):
+def testAgentWhois_whenDomainNameListAsset_emitsMessages(scan_message: message.Message,
+                                                         test_agent: whois_domain_agent.AgentWhoisDomain,
+                                                         agent_persist_mock: Any,
+                                                         mocker: plugin.MockerFixture,
+                                                         agent_mock: List[message.Message]) -> None:
     """Tests running the agent and emitting vulnerabilities."""
     del agent_persist_mock
 
@@ -93,3 +105,23 @@ def testAgentWhois_whenDomainNameListAsset_emitsMessages(scan_message, test_agen
     assert len(agent_mock) > 0
     assert agent_mock[0].selector == 'v3.asset.domain_name.whois'
     assert agent_mock[0].data['name'] == 'test.ostorlab.co'
+
+
+def testAgentWhois_withBug_RunScan(bug_1750_message: message.Message,
+                                   test_agent: whois_domain_agent.AgentWhoisDomain,
+                                   agent_persist_mock: Any,
+                                   agent_mock: List[message.Message]) -> None:
+    """Tests running the agent and emitting vulnerabilities."""
+    del agent_persist_mock
+
+    test_agent.start()
+    test_agent.process(bug_1750_message)
+
+    assert len(agent_mock) > 0
+    assert agent_mock[0].selector == 'v3.asset.domain_name.whois'
+    assert agent_mock[0].data['name'] == '6sense.com'
+    assert agent_mock[0].data['updated_date'] == ['2022-07-16T12:55:30', '2022-07-16T07:55:28']
+    assert agent_mock[0].data['creation_date'] == ['1998-07-17T04:00:00', '1998-07-16T23:00:00']
+    assert agent_mock[0].data['expiration_date'] == ['2023-07-16T04:00:00', '2023-07-15T23:00:00']
+    assert agent_mock[0].data['emails'] == ['abuse@godaddy.com']
+    assert agent_mock[0].data['address'] == 'DomainsByProxy.com 2155 E Warner Rd'

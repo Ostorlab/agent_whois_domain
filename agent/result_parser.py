@@ -1,9 +1,7 @@
 """Module to parse whois_domain scan results."""
 import datetime
 from typing import Any, Union, List, Dict, Iterator
-
 import whois
-
 
 OPTIONAL_FIELDS = ['registrar', 'whois_server', 'referral_url', 'org', 'address', 'city',
                    'state', 'zipcode', 'country']
@@ -18,7 +16,6 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[Dict[str, Any]]:
     Returns:
        The parsed output of the whois_domain scan results.
     """
-
     scan_output_dict = dict(results)
     names = set()
     for name in get_list_from_string(scan_output_dict.pop('domain_name', '')):
@@ -27,19 +24,20 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[Dict[str, Any]]:
 
     contact_name = scan_output_dict.pop('name', '')
     for name in names:
-        output = {'updated_date': get_isoformat(scan_output_dict.get('updated_date')),
-                  'creation_date': get_isoformat(scan_output_dict.get('creation_date')),
-                  'expiration_date': get_isoformat(scan_output_dict.get('expiration_date')),
+        output = {'updated_date': get_isoformat(scan_output_dict.get('updated_date', [])),
+                  'creation_date': get_isoformat(scan_output_dict.get('creation_date', [])),
+                  'expiration_date': get_isoformat(scan_output_dict.get('expiration_date', [])),
                   'name': name,
-                  'emails': get_list_from_string(scan_output_dict.get('emails')),
-                  'status': get_list_from_string(scan_output_dict.get('status')),
-                  'name_servers': get_list_from_string(scan_output_dict.get('name_servers')),
+                  'emails': get_list_from_string(scan_output_dict.get('emails', '')),
+                  'status': get_list_from_string(scan_output_dict.get('status', '')),
+                  'name_servers': get_list_from_string(scan_output_dict.get('name_servers', '')),
                   'contact_name': contact_name,
-                  'dnssec': get_list_from_string(scan_output_dict.get('dnssec'))
+                  'dnssec': get_list_from_string(scan_output_dict.get('dnssec', ''))
                   }
         for field in OPTIONAL_FIELDS:
             if field in scan_output_dict:
-                output[field] = scan_output_dict[field]
+                value = scan_output_dict[field]
+                output[field] = _format_str(value) if value is not None else value
         yield output
 
 
@@ -75,3 +73,8 @@ def get_list_from_string(scan_output_value: Union[str, List[str]]) -> List[str]:
         return [scan_output_value]
     else:
         return scan_output_value or []
+
+
+def _format_str(value: str | List[str]) -> str:
+    """Handles string or list of strings and returns a single string."""
+    return value if isinstance(value, str) else ' '.join(value)

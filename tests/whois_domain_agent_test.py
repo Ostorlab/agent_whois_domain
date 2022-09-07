@@ -1,6 +1,11 @@
 """Unittests for whois_domain agent."""
 import datetime
 
+from pytest_mock import plugin
+from typing import List, Any
+from ostorlab.agent.message import message
+from agent import whois_domain_agent
+
 SCAN_OUTPUT = {
     'domain_name': 'test.ostorlab.co',
     'registrar': 'Tucows Domains Inc.',
@@ -64,8 +69,11 @@ SCAN_OUTPUT_LIST = {
 }
 
 
-def testAgentWhois_whenDomainNameAsset_emitsMessages(scan_message, test_agent,
-                                                     agent_persist_mock, mocker, agent_mock):
+def testAgentWhois_whenDomainNameAsset_emitsMessages(scan_message: message.Message,
+                                                     test_agent: whois_domain_agent.AgentWhoisDomain,
+                                                     agent_persist_mock: Any,
+                                                     mocker: plugin.MockerFixture,
+                                                     agent_mock: List[message.Message]) -> None:
     """Tests running the agent and emitting vulnerabilities."""
     del agent_persist_mock
 
@@ -82,8 +90,11 @@ def testAgentWhois_whenDomainNameAsset_emitsMessages(scan_message, test_agent,
     assert agent_mock[0].data['emails'] == ['compliance@tucows.com', 'easydns@myprivacy.ca']
 
 
-def testAgentWhois_whenDomainNameListAsset_emitsMessages(scan_message, test_agent,
-                                                         agent_persist_mock, mocker, agent_mock):
+def testAgentWhois_whenDomainNameListAsset_emitsMessages(scan_message: message.Message,
+                                                         test_agent: whois_domain_agent.AgentWhoisDomain,
+                                                         agent_persist_mock: Any,
+                                                         mocker: plugin.MockerFixture,
+                                                         agent_mock: List[message.Message]) -> None:
     """Tests running the agent and emitting vulnerabilities."""
     del agent_persist_mock
 
@@ -96,8 +107,10 @@ def testAgentWhois_whenDomainNameListAsset_emitsMessages(scan_message, test_agen
     assert agent_mock[0].data['name'] == 'test.ostorlab.co'
 
 
-def testAgentWhois_withBug_RunScan(bug_1750_message, test_agent,
-                                   agent_persist_mock, mocker, agent_mock):
+def testAgentWhois_withBug_RunScan(bug_1750_message: message.Message,
+                                   test_agent: whois_domain_agent.AgentWhoisDomain,
+                                   agent_persist_mock: Any,
+                                   agent_mock: List[message.Message]) -> None:
     """Tests running the agent and emitting vulnerabilities."""
     del agent_persist_mock
 

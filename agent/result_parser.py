@@ -2,7 +2,6 @@
 import datetime
 from typing import Any, Union, List, Dict, Iterator
 import whois
-from functools import reduce
 
 OPTIONAL_FIELDS = ['registrar', 'whois_server', 'referral_url', 'org', 'address', 'city',
                    'state', 'zipcode', 'country']
@@ -38,7 +37,7 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[Dict[str, Any]]:
         for field in OPTIONAL_FIELDS:
             if field in scan_output_dict:
                 value = scan_output_dict[field]
-                output[field] = format_str(value) if value is not None else value
+                output[field] = _format_str(value) if value is not None else value
         yield output
 
 
@@ -76,10 +75,6 @@ def get_list_from_string(scan_output_value: Union[str, List[str]]) -> List[str]:
         return scan_output_value or []
 
 
-def format_str(value: str | List[str]) -> str:
-    """concat string list to match proto format
-
-    """
-    if isinstance(value, str):
-        return value
-    return reduce((lambda x, y: ' '.join([x, y])), value)
+def _format_str(value: str | List[str]) -> str:
+    """Handles string or list of strings and returns a single string."""
+    return value if isinstance(value, str) else ' '.join(value)

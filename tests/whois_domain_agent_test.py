@@ -1,9 +1,10 @@
 """Unittests for whois_domain agent."""
 import datetime
-
-from pytest_mock import plugin
 from typing import List, Any
+
 from ostorlab.agent.message import message
+from pytest_mock import plugin
+
 from agent import whois_domain_agent
 
 SCAN_OUTPUT = {
@@ -23,7 +24,7 @@ SCAN_OUTPUT = {
         "clientUpdateProhibited https://icann.org/epp#clientUpdateProhibited",
         "clientTransferProhibited https://icann.org/epp#clientTransferProhibited",
     ],
-    "emails": ["compliance@tucows.com", "easydns@myprivacy.ca"],
+    "emails": ["abuse@godaddy.com"],
     "dnssec": "unsigned",
     "name": "REDACTED FOR PRIVACY",
     "org": "Contact Privacy Inc. Customer 0139267634",
@@ -83,10 +84,7 @@ def testAgentWhois_whenDomainNameAsset_emitsMessages(
     assert agent_mock[0].data["updated_date"] == ["2018-12-08T10:36:41"]
     assert agent_mock[0].data["creation_date"] == ["2015-01-27T22:03:32"]
     assert agent_mock[0].data["expiration_date"] == ["2023-01-26T23:59:59"]
-    assert agent_mock[0].data["emails"] == [
-        "compliance@tucows.com",
-        "easydns@myprivacy.ca",
-    ]
+    assert agent_mock[0].data["emails"] == ["abuse@godaddy.com"]
 
 
 def testAgentWhois_whenDomainNameListAsset_emitsMessages(
@@ -122,18 +120,12 @@ def testAgentWhois_withBug_RunScan(
 
     assert len(agent_mock) > 0
     assert agent_mock[0].selector == "v3.asset.domain_name.whois"
-    assert agent_mock[0].data["name"] == "6sense.com"
-    assert agent_mock[0].data["updated_date"] == [
-        "2022-07-16T12:55:30",
-        "2022-07-16T07:55:28",
+    assert agent_mock[0].data["name"] == "ostorlab.co"
+    assert agent_mock[0].data["updated_date"] == ["2018-12-08T10:36:41"]
+    assert agent_mock[0].data["creation_date"] == ["2015-01-27T22:03:32"]
+    assert agent_mock[0].data["expiration_date"] == ["2023-01-26T23:59:59"]
+    assert agent_mock[0].data["emails"] == [
+        "compliance@tucows.com",
+        "easydns@myprivacy.ca",
     ]
-    assert agent_mock[0].data["creation_date"] == [
-        "1998-07-17T04:00:00",
-        "1998-07-16T23:00:00",
-    ]
-    assert agent_mock[0].data["expiration_date"] == [
-        "2023-07-16T04:00:00",
-        "2023-07-15T23:00:00",
-    ]
-    assert agent_mock[0].data["emails"] == ["abuse@godaddy.com"]
-    assert agent_mock[0].data["address"] == "DomainsByProxy.com 2155 E Warner Rd"
+    assert agent_mock[0].data["address"] == "REDACTED FOR PRIVACY"

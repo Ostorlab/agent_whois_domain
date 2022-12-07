@@ -43,6 +43,6 @@ def bug_1750_message() -> message.Message:
     """Creates a dummy message of type v3.asset.domain_name to be used by the agent for testing purposes."""
     selector = "v3.asset.domain_name"
     msg_data = {
-        "name": "epsilon-cloudfront.6sense.com",
+        "name": "ostorlab.co",
     }
     return message.Message.from_data(selector, data=msg_data)

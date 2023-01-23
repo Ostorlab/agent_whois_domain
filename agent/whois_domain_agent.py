@@ -54,7 +54,7 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
         if self.set_add("agent_whois_domain_asset", domain) is False:
             logger.info("target %s was processed before, exiting", domain)
             return
-        if self._is_domain_in_scope(self._scope_domain_regex, domain) is False:
+        if self._is_domain_in_scope(domain) is False:
             return
 
         try:

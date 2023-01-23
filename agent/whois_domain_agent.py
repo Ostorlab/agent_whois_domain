@@ -1,7 +1,6 @@
 """Whois Domain Agent: Agent responsible for retrieving WHOIS information of a domain."""
 import logging
 import re
-from typing import Optional
 
 from rich import logging as rich_logging
 import whois
@@ -38,7 +37,7 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
     ) -> None:
         agent.Agent.__init__(self, agent_definition, agent_settings)
         persist_mixin.AgentPersistMixin.__init__(self, agent_settings)
-        self._scope_domain_regex: Optional[str] = self.args.get("scope_domain_regex")
+        self._scope_domain_regex: str | None = self.args.get("scope_domain_regex")
 
     def process(self, message: msg.Message) -> None:
         """Starts a whois scan, wait for the scan to finish,
@@ -64,18 +63,16 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
         except parser.PywhoisError as e:
             logger.error(e)
 
-    def _is_domain_in_scope(
-        self, scope_domain_regex: Optional[str], domain: str
-    ) -> bool:
+    def _is_domain_in_scope(self, domain: str) -> bool:
         """Check if a domain is in the scan scope with a regular expression."""
-        if scope_domain_regex is None:
+        if self._scope_domain_regex is None:
             return True
-        domain_in_scope = re.match(scope_domain_regex, domain)
+        domain_in_scope = re.match(self._scope_domain_regex, domain)
         if domain_in_scope is None:
             logger.warning(
                 "Domain %s is not in scanning scope %s",
                 domain,
-                scope_domain_regex,
+                self._scope_domain_regex,
             )
             return False
         else:

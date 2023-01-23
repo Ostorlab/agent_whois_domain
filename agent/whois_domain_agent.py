@@ -56,11 +56,6 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
             logger.info("target %s was processed before, exiting", domain)
             return
         if self._is_domain_in_scope(self._scope_domain_regex, domain) is False:
-            logger.warning(
-                "Domain %s is not in scanning scope %s",
-                domain,
-                self._scope_domain_regex,
-            )
             return
 
         try:
@@ -76,6 +71,11 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
             return True
         domain_in_scope = re.match(scope_domain_regex, domain) is not None
         if not domain_in_scope:
+            logger.warning(
+                "Domain %s is not in scanning scope %s",
+                domain,
+                scope_domain_regex,
+            )
             return False
         else:
             return False

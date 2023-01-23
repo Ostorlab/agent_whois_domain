@@ -67,10 +67,11 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
     def _is_domain_in_scope(
         self, scope_domain_regex: Optional[str], domain: str
     ) -> bool:
+        """Check if a domain is in the scan scope with a regular expression."""
         if scope_domain_regex is None:
             return True
-        domain_in_scope = re.match(scope_domain_regex, domain) is not None
-        if not domain_in_scope:
+        domain_in_scope = re.match(scope_domain_regex, domain)
+        if domain_in_scope is None:
             logger.warning(
                 "Domain %s is not in scanning scope %s",
                 domain,
@@ -78,7 +79,7 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
             )
             return False
         else:
-            return False
+            return True
 
     def _fetch_whois(self, domain_name: str) -> whois.parser.WhoisCom:
         """Collect whois data.

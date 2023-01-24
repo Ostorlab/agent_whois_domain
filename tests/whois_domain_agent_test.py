@@ -129,3 +129,50 @@ def testAgentWhois_withBug_RunScan(
         "easydns@myprivacy.ca",
     ]
     assert agent_mock[0].data["address"] == "REDACTED FOR PRIVACY"
+
+
+def testAgentWhois_withDomainScopeArgAndDomainMessageInScope_emitsMessages(
+    test_agent_with_scope_arg: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    agent_mock: List[message.Message],
+) -> None:
+    """Ensure the domain scope argument is enforced, and domains in the scope should be scanned."""
+    del agent_persist_mock
+    selector = "v3.asset.domain_name"
+    msg_data = {
+        "name": "a.b.c.d.medallia.com",
+    }
+    scan_message = message.Message.from_data(selector, data=msg_data)
+    mock_whois = mocker.patch("whois.whois", return_value=SCAN_OUTPUT)
+
+    test_agent_with_scope_arg.start()
+    test_agent_with_scope_arg.process(scan_message)
+
+    mock_whois.assert_called_once()
+    assert len(agent_mock) > 0
+    assert agent_mock[0].selector == "v3.asset.domain_name.whois"
+    assert agent_mock[0].data["name"] == "test.ostorlab.co"
+    assert agent_mock[0].data["emails"] == ["abuse@godaddy.com"]
+
+
+def testAgentWhois_withDomainScopeArgAndDomainMessageNotInScope_targetShouldNotBeScanned(
+    test_agent_with_scope_arg: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    agent_mock: List[message.Message],
+) -> None:
+    """Ensure the domain scope argument is enforced, and domains not in the scope should not be scanned."""
+    del agent_persist_mock
+    selector = "v3.asset.domain_name"
+    msg_data = {
+        "name": "ostorlab.com",
+    }
+    scan_message = message.Message.from_data(selector, data=msg_data)
+    mock_whois = mocker.patch("whois.whois", return_value=SCAN_OUTPUT)
+
+    test_agent_with_scope_arg.start()
+    test_agent_with_scope_arg.process(scan_message)
+
+    assert mock_whois.called == 0
+    assert len(agent_mock) == 0

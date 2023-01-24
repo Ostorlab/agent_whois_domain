@@ -1,5 +1,6 @@
 """Whois Domain Agent: Agent responsible for retrieving WHOIS information of a domain."""
 import logging
+import re
 
 from rich import logging as rich_logging
 import whois
@@ -36,6 +37,7 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
     ) -> None:
         agent.Agent.__init__(self, agent_definition, agent_settings)
         persist_mixin.AgentPersistMixin.__init__(self, agent_settings)
+        self._scope_domain_regex: str | None = self.args.get("scope_domain_regex")
 
     def process(self, message: msg.Message) -> None:
         """Starts a whois scan, wait for the scan to finish,
@@ -49,14 +51,32 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
             return
 
         logger.info("Processing message of selector : %s", message.selector)
-        if not self.set_add("agent_whois_domain_asset", domain):
+        if self.set_add("agent_whois_domain_asset", domain) is False:
             logger.info("target %s was processed before, exiting", domain)
             return
+        if self._is_domain_in_scope(domain) is False:
+            return
+
         try:
             scan_output = self._fetch_whois(domain)
             self._emit_result(scan_output)
         except parser.PywhoisError as e:
             logger.error(e)
+
+    def _is_domain_in_scope(self, domain: str) -> bool:
+        """Check if a domain is in the scan scope with a regular expression."""
+        if self._scope_domain_regex is None:
+            return True
+        domain_in_scope = re.match(self._scope_domain_regex, domain)
+        if domain_in_scope is None:
+            logger.warning(
+                "Domain %s is not in scanning scope %s",
+                domain,
+                self._scope_domain_regex,
+            )
+            return False
+        else:
+            return True
 
     def _fetch_whois(self, domain_name: str) -> whois.parser.WhoisCom:
         """Collect whois data.

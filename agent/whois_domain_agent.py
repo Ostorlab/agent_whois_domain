@@ -1,17 +1,18 @@
 """Whois Domain Agent: Agent responsible for retrieving WHOIS information of a domain."""
 import logging
 import re
+from typing import cast
+
 import tld
-from rich import logging as rich_logging
 import whois
-from whois import parser
-from ostorlab.agent.message import message as msg
 from ostorlab.agent import agent, definitions as agent_definitions
+from ostorlab.agent.message import message as msg
 from ostorlab.agent.mixins import agent_persist_mixin as persist_mixin
 from ostorlab.runtimes import definitions as runtime_definitions
+from rich import logging as rich_logging
+from whois import parser
 
 from agent import result_parser
-
 
 logging.basicConfig(
     format="%(message)s",
@@ -50,8 +51,8 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
         if domain is None:
             return
 
-        domain_object: tld.Result = tld.get_tld(
-            domain, as_object=True, fix_protocol=True
+        domain_object = cast(
+            tld.Result, tld.get_tld(domain, as_object=True, fix_protocol=True)
         )
 
         logger.info("Processing message of selector : %s.", message.selector)

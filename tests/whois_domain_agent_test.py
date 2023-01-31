@@ -106,7 +106,7 @@ def testAgentWhois_whenDomainNameListAsset_emitsMessages(
     assert agent_mock[0].data["name"] == "test.ostorlab.co"
 
 
-def testAgentWhois_withBug_RunScan(
+def testAgentWhois_withBug1750_RunScan(
     bug_1750_message: message.Message,
     test_agent: whois_domain_agent.AgentWhoisDomain,
     agent_persist_mock: Any,
@@ -121,14 +121,31 @@ def testAgentWhois_withBug_RunScan(
     assert len(agent_mock) > 0
     assert agent_mock[0].selector == "v3.asset.domain_name.whois"
     assert agent_mock[0].data["name"] == "ostorlab.co"
-    assert agent_mock[0].data["updated_date"] == ["2018-12-08T10:36:41"]
+    assert agent_mock[0].data["updated_date"] == ["2023-01-30T06:57:45"]
     assert agent_mock[0].data["creation_date"] == ["2015-01-27T22:03:32"]
-    assert agent_mock[0].data["expiration_date"] == ["2023-01-26T23:59:59"]
+    assert agent_mock[0].data["expiration_date"] == ["2027-01-26T23:59:59"]
     assert agent_mock[0].data["emails"] == [
         "compliance@tucows.com",
         "easydns@myprivacy.ca",
     ]
     assert agent_mock[0].data["address"] == "REDACTED FOR PRIVACY"
+
+
+def testAgentWhois_withBug3001_RunScan(
+    bug_3001_message: message.Message,
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    agent_mock: List[message.Message],
+) -> None:
+    """Tests running the agent and emitting vulnerabilities."""
+    del agent_persist_mock
+
+    test_agent.start()
+    test_agent.process(bug_3001_message)
+
+    assert len(agent_mock) > 0
+    assert agent_mock[0].selector == "v3.asset.domain_name.whois"
+    assert agent_mock[0].data["name"] == "rexel.it"
 
 
 def testAgentWhois_withDomainScopeArgAndDomainMessageInScope_emitsMessages(
@@ -176,3 +193,36 @@ def testAgentWhois_withDomainScopeArgAndDomainMessageNotInScope_targetShouldNotB
 
     assert mock_whois.called == 0
     assert len(agent_mock) == 0
+
+
+def testAgentWhois_whenDifferentSubdomainsRecevied_onlyFldIsProcessed(
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    agent_mock: List[message.Message],
+) -> None:
+    """Tests running the agent and emitting vulnerabilities."""
+    del agent_persist_mock
+
+    mock_whois = mocker.patch("whois.whois", return_value=SCAN_OUTPUT_LIST)
+    test_agent.start()
+    test_agent.process(
+        message.Message.from_data(
+            "v3.asset.domain_name",
+            data={
+                "name": "foobar.ostorlab.co",
+            },
+        )
+    )
+    test_agent.process(
+        message.Message.from_data(
+            "v3.asset.domain_name",
+            data={
+                "name": "toto.ostorlab.co",
+            },
+        )
+    )
+    mock_whois.assert_called_once()
+    assert len(agent_mock) > 0
+    assert agent_mock[0].selector == "v3.asset.domain_name.whois"
+    assert agent_mock[0].data["name"] == "test.ostorlab.co"

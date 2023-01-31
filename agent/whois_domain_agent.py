@@ -1,17 +1,18 @@
 """Whois Domain Agent: Agent responsible for retrieving WHOIS information of a domain."""
 import logging
 import re
+from typing import cast
 
-from rich import logging as rich_logging
+import tld
 import whois
-from whois import parser
-from ostorlab.agent.message import message as msg
 from ostorlab.agent import agent, definitions as agent_definitions
+from ostorlab.agent.message import message as msg
 from ostorlab.agent.mixins import agent_persist_mixin as persist_mixin
 from ostorlab.runtimes import definitions as runtime_definitions
+from rich import logging as rich_logging
+from whois import parser
 
 from agent import result_parser
-
 
 logging.basicConfig(
     format="%(message)s",
@@ -50,15 +51,19 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
         if domain is None:
             return
 
-        logger.info("Processing message of selector : %s", message.selector)
-        if self.set_add("agent_whois_domain_asset", domain) is False:
-            logger.info("target %s was processed before, exiting", domain)
+        domain_object = cast(
+            tld.Result, tld.get_tld(domain, as_object=True, fix_protocol=True)
+        )
+
+        logger.info("Processing message of selector : %s.", message.selector)
+        if self.set_add("agent_whois_domain_asset", domain_object.fld) is False:
+            logger.info("target %s was processed before, exiting", domain_object.fld)
             return
-        if self._is_domain_in_scope(domain) is False:
+        if self._is_domain_in_scope(domain_object.fld) is False:
             return
 
         try:
-            scan_output = self._fetch_whois(domain)
+            scan_output = self._fetch_whois(domain_object.fld)
             self._emit_result(scan_output)
         except parser.PywhoisError as e:
             logger.error(e)

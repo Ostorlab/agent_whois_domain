@@ -50,7 +50,7 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
         if domain is None:
             return
 
-        domain_object = tld.get_tld(domain, as_object=True, fix_protocol=True)
+        domain_object: tld.Result = tld.get_tld(domain, as_object=True, fix_protocol=True)
 
         logger.info("Processing message of selector : %s.", message.selector)
         if self.set_add("agent_whois_domain_asset", domain_object.fld) is False:

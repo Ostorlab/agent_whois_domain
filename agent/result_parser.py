@@ -49,7 +49,9 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[Dict[str, Any]]:
                     scan_output_dict.get("name_servers", "")
                 ),
                 # TODO(ticket: os-3017):  change the proto of v3.asset.domain_name.whois to send contact names.
-                "contact_name": contact_name[0] if isinstance(contact_name, list) else contact_name,
+                "contact_name": contact_name[0]
+                if isinstance(contact_name, list)
+                else contact_name,
                 "dnssec": get_list_from_string(scan_output_dict.get("dnssec", "")),
             }
             for field in OPTIONAL_FIELDS:
@@ -60,7 +62,7 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[Dict[str, Any]]:
 
 
 def get_isoformat(
-        date_name: Union[datetime.datetime, List[datetime.datetime]]
+    date_name: Union[datetime.datetime, List[datetime.datetime]]
 ) -> List[str]:
     """Converts dates to ISO fomat
 

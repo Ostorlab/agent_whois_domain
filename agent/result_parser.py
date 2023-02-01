@@ -42,13 +42,15 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[Dict[str, Any]]:
                 "expiration_date": get_isoformat(
                     scan_output_dict.get("expiration_date", [])
                 ),
-                "name": name,
+                "name": _format_str(name) if name is not None else name,
                 "emails": get_list_from_string(scan_output_dict.get("emails", "")),
                 "status": get_list_from_string(scan_output_dict.get("status", "")),
                 "name_servers": get_list_from_string(
                     scan_output_dict.get("name_servers", "")
                 ),
-                "contact_name": contact_name,
+                "contact_name": _format_str(contact_name)
+                if contact_name is not None
+                else contact_name,
                 "dnssec": get_list_from_string(scan_output_dict.get("dnssec", "")),
             }
             for field in OPTIONAL_FIELDS:

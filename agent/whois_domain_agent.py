@@ -48,25 +48,31 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
             message:  The message to process from ostorlab runtime.
         """
         domain = message.data.get("name")
-        if domain is None:
+        if domain is None or domain == "":
             return
 
         domain_object = cast(
-            tld.Result, tld.get_tld(domain, as_object=True, fix_protocol=True)
+            tld.Result,
+            tld.get_tld(domain, as_object=True, fix_protocol=True, fail_silently=True),
         )
 
-        logger.info("Processing message of selector : %s.", message.selector)
-        if self.set_add("agent_whois_domain_asset", domain_object.fld) is False:
-            logger.info("target %s was processed before, exiting", domain_object.fld)
-            return
-        if self._is_domain_in_scope(domain_object.fld) is False:
-            return
+        if domain_object is not None:
+            logger.info("Processing message of selector : %s.", message.selector)
+            if self.set_add("agent_whois_domain_asset", domain_object.fld) is False:
+                logger.info(
+                    "target %s was processed before, exiting", domain_object.fld
+                )
+                return
+            if self._is_domain_in_scope(domain_object.fld) is False:
+                return
 
-        try:
-            scan_output = self._fetch_whois(domain_object.fld)
-            self._emit_result(scan_output)
-        except parser.PywhoisError as e:
-            logger.error(e)
+            try:
+                scan_output = self._fetch_whois(domain_object.fld)
+                self._emit_result(scan_output)
+            except parser.PywhoisError as e:
+                logger.error(e)
+        else:
+            logger.error(f"domain is not a valid URL. {domain}")
 
     def _is_domain_in_scope(self, domain: str) -> bool:
         """Check if a domain is in the scan scope with a regular expression."""

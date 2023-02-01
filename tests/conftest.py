@@ -13,6 +13,16 @@ from agent import whois_domain_agent
 
 
 @pytest.fixture
+def scan_message_not_valid() -> message.Message:
+    """Creates a dummy message of type v3.asset.domain_name to be used by the agent for testing purposes."""
+    selector = "v3.asset.domain_name"
+    msg_data = {
+        "name": "test",
+    }
+    return message.Message.from_data(selector, data=msg_data)
+
+
+@pytest.fixture
 def scan_message() -> message.Message:
     """Creates a dummy message of type v3.asset.domain_name to be used by the agent for testing purposes."""
     selector = "v3.asset.domain_name"

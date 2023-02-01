@@ -72,7 +72,7 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
             except parser.PywhoisError as e:
                 logger.error(e)
         else:
-            logger.error(f"domain is not a valid URL. {domain}")
+            logger.error("domain is not a valid URL: %s", domain)
 
     def _is_domain_in_scope(self, domain: str) -> bool:
         """Check if a domain is in the scan scope with a regular expression."""

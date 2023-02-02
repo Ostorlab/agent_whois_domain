@@ -150,6 +150,7 @@ def testAgentWhois_whenMultipleContactNames_emitsMessages(
     test_agent.start()
     test_agent.process(scan_message)
     mock_whois.assert_called_once()
+    
     assert len(agent_mock) > 0
     assert agent_mock[0].selector == "v3.asset.domain_name.whois"
     assert agent_mock[0].data["name"] == "marksandspencer.at"

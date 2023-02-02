@@ -182,7 +182,7 @@ def testAgentWhois_whenDomainNameInputIsEmpty_NotEmitsMessages(
     assert len(agent_mock) == 0
 
 
-def testAgentWhois_whenDomainNameISEmpty_NotEmitsMessages(
+def testAgentWhois_whenDomainNameIsEmpty_notEmitsMessages(
     scan_message: message.Message,
     test_agent: whois_domain_agent.AgentWhoisDomain,
     agent_persist_mock: Any,

@@ -133,7 +133,6 @@ def testAgentWhois_whenDomainNameAsset_emitsMessages(
     assert agent_mock[0].data["expiration_date"] == ["2023-01-26T23:59:59"]
     assert agent_mock[0].data["emails"] == ["abuse@godaddy.com"]
 
-
 def testAgentWhois_whenMultipleContactNames_emitsMessages(
     scan_message: message.Message,
     test_agent: whois_domain_agent.AgentWhoisDomain,
@@ -164,6 +163,21 @@ def testAgentWhois_whenMultipleContactNames_emitsMessages(
     ]
     assert agent_mock[0].data["contact_name"] == "Catherine Shapiro"
 
+def testAgentWhois_whenDomainNameInputIsEmpty_NotEmitsMessages(
+    scan_message_not_valid: message.Message,
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    agent_mock: List[message.Message],
+) -> None:
+    """Tests running the agent and emitting vulnerabilities."""
+    del agent_persist_mock
+
+    mock_whois = mocker.patch("whois.whois")
+    test_agent.start()
+    test_agent.process(scan_message_not_valid)
+    mock_whois.assert_not_called()
+    assert len(agent_mock) == 0
 
 def testAgentWhois_whenDomainNameISEmpty_NotEmitsMessages(
     scan_message: message.Message,

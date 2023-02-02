@@ -45,7 +45,7 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[Dict[str, Any]]:
                 "name": name,
                 "emails": get_list_from_string(
                     scan_output_dict.get("email", "")
-                    if scan_output_dict.get("email", "") is not ""
+                    if scan_output_dict.get("email", "") != ""
                     else scan_output_dict.get("emails", "")
                 ),
                 "status": get_list_from_string(scan_output_dict.get("status", "")),

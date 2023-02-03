@@ -43,12 +43,19 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[Dict[str, Any]]:
                     scan_output_dict.get("expiration_date", [])
                 ),
                 "name": name,
-                "emails": get_list_from_string(scan_output_dict.get("emails", "")),
+                "emails": get_list_from_string(
+                    scan_output_dict.get("email", "")
+                    if scan_output_dict.get("email", "") != ""
+                    else scan_output_dict.get("emails", "")
+                ),
                 "status": get_list_from_string(scan_output_dict.get("status", "")),
                 "name_servers": get_list_from_string(
                     scan_output_dict.get("name_servers", "")
                 ),
-                "contact_name": contact_name,
+                # TODO(ticket: os-3017):  change the proto of v3.asset.domain_name.whois to send contact names.
+                "contact_name": contact_name[0]
+                if isinstance(contact_name, list)
+                else contact_name,
                 "dnssec": get_list_from_string(scan_output_dict.get("dnssec", "")),
             }
             for field in OPTIONAL_FIELDS:

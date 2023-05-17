@@ -2,8 +2,6 @@ pylint
 pylint-quotes
 pytest
 pytest-mock
-
-
 # Typing requirements. 
 mypy
 types-click

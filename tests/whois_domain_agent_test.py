@@ -110,6 +110,25 @@ SCAN_OUTPUT_MULTIPLE_CONTACT_NAMES = {
     "email": ["externaldnssupport@marks-and-spencer.com", "ivan.sly@iptwins.com"],
 }
 
+SCAN_OUTPUT_NO_CONTACT_NAMES = {
+    "domain_name": "marksandspencer.at",
+    "registrar": "Key-Systems GmbH ( https://nic.at/registrar/404 )",
+    "name": [],
+    "org": ["Marks And Spencer P.l.c.", "IP TWINS S.A.S."],
+    "address": ["Waterside House", "35 North Wharf Road", "78 rue de Turbigo"],
+    "registrant_postal_code": ["W2 1NW", "75003"],
+    "city": ["London", "PARIS"],
+    "country": ["United Kingdom of Great Britain and Northern Ireland (the)", "France"],
+    "phone": ["+442087186494", "+33142789312"],
+    "fax": "+440207487267",
+    "updated_date": [
+        datetime.datetime(2021, 6, 23, 10, 10, 57),
+        datetime.datetime(2021, 6, 23, 10, 7, 2),
+        datetime.datetime(2023, 1, 4, 19, 30, 24),
+    ],
+    "email": ["externaldnssupport@marks-and-spencer.com", "ivan.sly@iptwins.com"],
+}
+
 
 def testAgentWhois_whenDomainNameAsset_emitsMessages(
     scan_message: message.Message,
@@ -163,7 +182,37 @@ def testAgentWhois_whenMultipleContactNames_emitsMessages(
         "externaldnssupport@marks-and-spencer.com",
         "ivan.sly@iptwins.com",
     ]
-    assert agent_mock[0].data["contact_name"] == "Catherine Shapiro"
+    assert agent_mock[0].data["contact_names"] == ["Catherine Shapiro", "Ivan SLY"]
+
+
+def testAgentWhois_whenNoContactNames_emitsMessages(
+    scan_message: message.Message,
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    agent_mock: List[message.Message],
+) -> None:
+    """Tests running the agent and emitting vulnerabilities."""
+    del agent_persist_mock
+
+    mock_whois = mocker.patch("whois.whois", return_value=SCAN_OUTPUT_NO_CONTACT_NAMES)
+    test_agent.start()
+    test_agent.process(scan_message)
+    mock_whois.assert_called_once()
+
+    assert len(agent_mock) > 0
+    assert agent_mock[0].selector == "v3.asset.domain_name.whois"
+    assert agent_mock[0].data["name"] == "marksandspencer.at"
+    assert agent_mock[0].data["updated_date"] == [
+        "2021-06-23T10:10:57",
+        "2021-06-23T10:07:02",
+        "2023-01-04T19:30:24",
+    ]
+    assert agent_mock[0].data["emails"] == [
+        "externaldnssupport@marks-and-spencer.com",
+        "ivan.sly@iptwins.com",
+    ]
+    assert "contact_names" not in agent_mock[0].data
 
 
 def testAgentWhois_whenDomainNameInputIsEmpty_NotEmitsMessages(

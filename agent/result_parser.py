@@ -33,7 +33,7 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[Dict[str, Any]]:
 
     for name in names:
         if name != "":
-            output: dict[str, Any] = {
+            output: dict[str, str | list] = {
                 "updated_date": get_isoformat(scan_output_dict.get("updated_date", [])),
                 "creation_date": get_isoformat(
                     scan_output_dict.get("creation_date", [])

@@ -2,3 +2,4 @@ ostorlab[agent]
 rich
 python-whois
 tld
+email-validator

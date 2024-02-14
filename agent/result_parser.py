@@ -1,5 +1,6 @@
 """Module to parse whois_domain scan results."""
 import datetime
+import re
 from typing import Any, Union, List, Dict, Iterator
 import whois
 
@@ -16,6 +17,7 @@ OPTIONAL_FIELDS = [
 ]
 
 UNDISCLOSED_VALUE = "<data not disclosed>"
+EMAIL_REGEX = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b"
 
 
 def parse_results(results: whois.parser.WhoisCom) -> Iterator[Dict[str, Any]]:
@@ -35,6 +37,13 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[Dict[str, Any]]:
 
     for name in names:
         if name != "":
+            found_emails = get_list_from_string(
+                scan_output_dict.get("email") or scan_output_dict.get("emails", "")
+            )
+            valid_emails = [
+                email for email in found_emails if re.match(EMAIL_REGEX, email)
+            ]
+
             output: dict[str, str | list[str] | None] = {
                 "updated_date": get_isoformat(scan_output_dict.get("updated_date", [])),
                 "creation_date": get_isoformat(
@@ -44,9 +53,7 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[Dict[str, Any]]:
                     scan_output_dict.get("expiration_date", [])
                 ),
                 "name": name,
-                "emails": get_list_from_string(
-                    scan_output_dict.get("email") or scan_output_dict.get("emails", "")
-                ),
+                "emails": valid_emails,
                 "status": get_list_from_string(scan_output_dict.get("status", "")),
                 "name_servers": get_list_from_string(
                     scan_output_dict.get("name_servers", "")
@@ -54,6 +61,7 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[Dict[str, Any]]:
                 "contact_names": get_list_from_string(scan_output_dict.get("name", "")),
                 "dnssec": get_list_from_string(scan_output_dict.get("dnssec", "")),
             }
+
             for field in OPTIONAL_FIELDS:
                 if field in scan_output_dict:
                     value = scan_output_dict[field]

@@ -394,7 +394,7 @@ def testAgentWhois_whenEmailIsNotDisclosed_shouldNotEmitEmails(
     test_agent: whois_domain_agent.AgentWhoisDomain,
     mocker: plugin.MockerFixture,
     agent_persist_mock: Any,
-    agent_mock: List[message.Message],
+    agent_mock: list[message.Message],
 ) -> None:
     del agent_persist_mock
     mocker.patch(

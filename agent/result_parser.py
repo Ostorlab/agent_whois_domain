@@ -15,6 +15,8 @@ OPTIONAL_FIELDS = [
     "country",
 ]
 
+UNDISCLOSED_VALUE = "<data not disclosed>"
+
 
 def parse_results(results: whois.parser.WhoisCom) -> Iterator[Dict[str, Any]]:
     """Parses whois_domain scan results.
@@ -43,9 +45,7 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[Dict[str, Any]]:
                 ),
                 "name": name,
                 "emails": get_list_from_string(
-                    scan_output_dict.get("email", "")
-                    if scan_output_dict.get("email", "") != ""
-                    else scan_output_dict.get("emails", "")
+                    scan_output_dict.get("email") or scan_output_dict.get("emails", "")
                 ),
                 "status": get_list_from_string(scan_output_dict.get("status", "")),
                 "name_servers": get_list_from_string(
@@ -96,6 +96,8 @@ def get_list_from_string(scan_output_value: Union[str, List[str]]) -> List[str]:
        A list from the scan_output_value.
     """
     if isinstance(scan_output_value, str):
+        if scan_output_value == UNDISCLOSED_VALUE:
+            return []
         return [scan_output_value]
     else:
         return scan_output_value or []

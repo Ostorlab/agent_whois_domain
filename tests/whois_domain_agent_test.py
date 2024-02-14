@@ -388,3 +388,26 @@ def testAgentWhois_whenDifferentSubdomainsRecevied_onlyFldIsProcessed(
     assert len(agent_mock) > 0
     assert agent_mock[0].selector == "v3.asset.domain_name.whois"
     assert agent_mock[0].data["name"] == "test.ostorlab.co"
+
+
+def testAgentWhois_whenEmailIsNotDisclosed_shouldNotEmitEmails(
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    mocker: plugin.MockerFixture,
+    agent_persist_mock: Any,
+    agent_mock: List[message.Message],
+) -> None:
+    del agent_persist_mock
+    mocker.patch(
+        "whois.whois", return_value={**SCAN_OUTPUT, "email": "<data not disclosed>"}
+    )
+
+    test_agent.process(
+        message.Message.from_data(
+            "v3.asset.domain_name",
+            data={
+                "name": "test.co",
+            },
+        )
+    )
+
+    assert agent_mock[0].data.get("emails") is None

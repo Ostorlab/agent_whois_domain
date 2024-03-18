@@ -1,4 +1,5 @@
 """Unittests for whois_domain agent."""
+
 import datetime
 from typing import List, Any
 

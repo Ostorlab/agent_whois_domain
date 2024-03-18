@@ -1,4 +1,5 @@
 """Pytest fixture for the whois domain agent."""
+
 import pathlib
 import random
 import json

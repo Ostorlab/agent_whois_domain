@@ -1,4 +1,5 @@
 """Whois Domain Agent: Agent responsible for retrieving WHOIS information of a domain."""
+
 import logging
 import re
 from typing import cast

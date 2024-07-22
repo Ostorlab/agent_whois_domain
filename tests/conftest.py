@@ -34,6 +34,16 @@ def scan_message() -> message.Message:
 
 
 @pytest.fixture
+def electro_scan_message() -> message.Message:
+    """Creates a dummy message of type v3.asset.domain_name to be used by the agent for testing purposes."""
+    selector = "v3.asset.domain_name"
+    msg_data = {
+        "name": "electrohold.bg",
+    }
+    return message.Message.from_data(selector, data=msg_data)
+
+
+@pytest.fixture
 def test_agent() -> whois_domain_agent.AgentWhoisDomain:
     """Creates a dummy agent for the Whois Domain Agent."""
 

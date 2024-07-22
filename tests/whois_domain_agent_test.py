@@ -412,3 +412,21 @@ def testAgentWhois_whenEmailIsNotDisclosed_shouldNotEmitEmails(
     )
 
     assert agent_mock[0].data.get("emails") is None
+
+
+def testAgentWhois_whenDomainNameAssetInvalidTLD_emitsMessages(
+    electro_scan_message: message.Message,
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    agent_mock: List[message.Message],
+) -> None:
+    """Tests running the agent and emitting vulnerabilities."""
+    del agent_persist_mock
+
+    test_agent.start()
+    test_agent.process(electro_scan_message)
+
+    assert len(agent_mock) > 0
+    assert agent_mock[0].selector == "v3.asset.domain_name.whois"
+    assert "electrohold.bg" in agent_mock[0].data["name"]

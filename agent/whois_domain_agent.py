@@ -2,8 +2,10 @@
 
 import logging
 import re
+import socket
 from typing import cast
 
+import tenacity
 import tld
 import whois
 from ostorlab.agent import agent, definitions as agent_definitions
@@ -27,6 +29,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 LIB_SELECTOR = "v3.asset.domain_name.whois"
+WAIT_TIME = 10
+RETRY_NUMBER = 3
 
 
 class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
@@ -69,6 +73,8 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
 
             try:
                 scan_output = self._fetch_whois(domain_object.fld)
+                if scan_output is None:
+                    return
                 self._emit_result(scan_output)
             except parser.PywhoisError as e:
                 logger.error(e)
@@ -90,7 +96,13 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
         else:
             return True
 
-    def _fetch_whois(self, domain_name: str) -> whois.parser.WhoisCom:
+    @tenacity.retry(
+        stop=tenacity.stop_after_attempt(RETRY_NUMBER),
+        wait=tenacity.wait_fixed(WAIT_TIME),
+        retry=tenacity.retry_if_exception_type((socket.gaierror, ConnectionResetError)),
+        retry_error_callback=lambda retry_state: None,
+    )
+    def _fetch_whois(self, domain_name: str) -> whois.parser.WhoisCom | None:
         """Collect whois data.
 
         Args:

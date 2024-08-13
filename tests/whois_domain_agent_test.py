@@ -430,3 +430,21 @@ def testAgentWhois_whenDomainNameAssetInvalidTLD_emitsMessages(
     assert len(agent_mock) > 0
     assert agent_mock[0].selector == "v3.asset.domain_name.whois"
     assert "electrohold.bg" in agent_mock[0].data["name"]
+
+
+def testAgentWhois_whenConnectionError_shouldNotCrash(
+    scan_message: message.Message,
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    agent_mock: List[message.Message],
+) -> None:
+    """Tests running the agent shouldn't crash when connection error occur."""
+    del agent_persist_mock
+    mocker.patch("time.sleep")
+    mock_whois = mocker.patch("whois.whois", side_effect=ConnectionResetError)
+
+    test_agent.start()
+    test_agent.process(scan_message)
+
+    assert mock_whois.call_count == 3

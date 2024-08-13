@@ -432,7 +432,7 @@ def testAgentWhois_whenDomainNameAssetInvalidTLD_emitsMessages(
     assert "electrohold.bg" in agent_mock[0].data["name"]
 
 
-def testAgentWhois_whenConnectionError_shouldNotCrash(
+def testAgentWhois_whenConnectionError_shouldRetry(
     scan_message: message.Message,
     test_agent: whois_domain_agent.AgentWhoisDomain,
     agent_persist_mock: Any,

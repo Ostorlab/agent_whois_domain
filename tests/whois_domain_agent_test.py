@@ -1,7 +1,7 @@
 """Unittests for whois_domain agent."""
 
 import datetime
-from typing import Any, List
+from typing import List, Any
 
 import pytest
 from ostorlab.agent.message import message

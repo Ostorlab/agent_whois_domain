@@ -24,6 +24,16 @@ def scan_message_not_valid() -> message.Message:
 
 
 @pytest.fixture
+def scan_message_bad_character() -> message.Message:
+    """Creates a dummy message with invalid domain name to test error handling."""
+    selector = "v3.asset.domain_name"
+    msg_data = {
+        "name": "meda�llia.com",
+    }
+    return message.Message.from_data(selector, data=msg_data)
+
+
+@pytest.fixture
 def scan_message() -> message.Message:
     """Creates a dummy message of type v3.asset.domain_name to be used by the agent for testing purposes."""
     selector = "v3.asset.domain_name"

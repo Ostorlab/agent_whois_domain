@@ -3,6 +3,7 @@
 import datetime
 from typing import List, Any
 
+import pytest
 from ostorlab.agent.message import message
 from pytest_mock import plugin
 
@@ -448,3 +449,22 @@ def testAgentWhois_whenConnectionError_shouldRetry(
     test_agent.process(scan_message)
 
     assert mock_whois.call_count == 3
+
+
+def testAgentWhois_whenWhoisUnicodeError_doesNotCrash(
+    scan_message_bad_character: message.Message,
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    agent_mock: List[message.Message],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """The agent should not crash when UnicodeError occurs."""
+    del agent_persist_mock
+    mocker.patch("time.sleep")
+
+    test_agent.start()
+    test_agent.process(scan_message_bad_character)
+
+    assert "Unicode error when fetching whois for" in caplog.text
+    assert len(agent_mock) == 0

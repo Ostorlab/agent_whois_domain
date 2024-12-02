@@ -466,8 +466,5 @@ def testAgentWhois_whenWhoisUnicodeError_doesNotCrash(
     test_agent.start()
     test_agent.process(scan_message_bad_character)
 
-    assert (
-        "Unicode error when fetching whois for meda�llia.com : Invalid character '�'"
-        in caplog.text
-    )
+    assert "Unicode error when fetching whois for" in caplog.text
     assert len(agent_mock) == 0

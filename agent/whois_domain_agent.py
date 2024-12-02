@@ -108,8 +108,14 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
         Args:
             domain_name: Target domain to lookup.
         """
-        logger.info("staring a new scan for %s .", domain_name)
-        whois_output = whois.whois(domain_name)
+        logger.info("Starting a new scan for %s .", domain_name)
+        try:
+            whois_output = whois.whois(domain_name)
+        except UnicodeError as e:
+            logger.error(
+                "Unicode error when fetching whois for %s : %s", domain_name, e
+            )
+            return None
         logger.info("done scanning %s .", domain_name)
         return whois_output
 

@@ -1,8 +1,9 @@
 """Unittests for whois_domain agent."""
 
 import datetime
-from typing import List, Any
+from typing import Any, List
 
+import pytest
 from ostorlab.agent.message import message
 from pytest_mock import plugin
 
@@ -448,3 +449,29 @@ def testAgentWhois_whenConnectionError_shouldRetry(
     test_agent.process(scan_message)
 
     assert mock_whois.call_count == 3
+
+
+def testAgentWhois_whenWhoisUnicodeError_doesNotCrash(
+    scan_message: message.Message,
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    agent_mock: List[message.Message],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """The agent should not crash when UnicodeError occurs."""
+    del agent_persist_mock
+    mocker.patch("time.sleep")
+    mock_whois = mocker.patch(
+        "whois.whois", side_effect=UnicodeError("Invalid character '�'")
+    )
+
+    test_agent.start()
+    test_agent.process(scan_message)
+
+    assert (
+        "Unicode error when fetching whois for medallia.com : Invalid character"
+        in caplog.text
+    )
+    assert mock_whois.called == 1
+    assert len(agent_mock) == 0

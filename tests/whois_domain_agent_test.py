@@ -452,7 +452,7 @@ def testAgentWhois_whenConnectionError_shouldRetry(
 
 
 def testAgentWhois_whenWhoisUnicodeError_doesNotCrash(
-    scan_message: message.Message,
+    scan_message_bad_character: message.Message,
     test_agent: whois_domain_agent.AgentWhoisDomain,
     agent_persist_mock: Any,
     mocker: plugin.MockerFixture,
@@ -462,16 +462,12 @@ def testAgentWhois_whenWhoisUnicodeError_doesNotCrash(
     """The agent should not crash when UnicodeError occurs."""
     del agent_persist_mock
     mocker.patch("time.sleep")
-    mock_whois = mocker.patch(
-        "whois.whois", side_effect=UnicodeError("Invalid character '�'")
-    )
 
     test_agent.start()
-    test_agent.process(scan_message)
+    test_agent.process(scan_message_bad_character)
 
     assert (
-        "Unicode error when fetching whois for medallia.com : Invalid character"
+        "Unicode error when fetching whois for meda�llia.com : Invalid character '�'"
         in caplog.text
     )
-    assert mock_whois.called == 1
     assert len(agent_mock) == 0

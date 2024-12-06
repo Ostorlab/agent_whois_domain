@@ -8,7 +8,7 @@ import pytest
 from ostorlab.agent import definitions as agent_definitions
 from ostorlab.runtimes import definitions as runtime_definitions
 from ostorlab.agent.message import message
-from ostorlab.utils import defintions
+from ostorlab.utils import definitions
 
 from agent import whois_domain_agent
 
@@ -82,7 +82,7 @@ def test_agent_with_scope_arg() -> whois_domain_agent.AgentWhoisDomain:
             bus_exchange_topic="NA",
             redis_url="redis://redis",
             args=[
-                defintions.Arg(
+                definitions.Arg(
                     name="scope_domain_regex",
                     type="string",
                     value=json.dumps(".*medallia.com").encode(),

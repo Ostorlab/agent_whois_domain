@@ -69,7 +69,7 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[Dict[str, Any]]:
 def get_isoformat(
     date_name: Union[datetime.datetime, List[datetime.datetime]],
 ) -> List[str]:
-    """Converts dates to ISO fomat
+    """Converts dates to ISO format
 
     Args:
        date_name (Union[datetime.datetime, List[datetime.datetime]]): _description_

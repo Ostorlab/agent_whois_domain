@@ -451,6 +451,22 @@ def testAgentWhois_whenConnectionError_shouldRetry(
     assert mock_whois.call_count == 3
 
 
+def testAgentWhois_whenTimeoutError_shouldRetry(
+    scan_message: message.Message,
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+) -> None:
+    """Tests running the agent shouldn't crash when timeout error occur."""
+    del agent_persist_mock
+    mocker.patch("time.sleep")
+    mock_whois = mocker.patch("whois.whois", side_effect=TimeoutError)
+
+    test_agent.process(scan_message)
+
+    assert mock_whois.call_count == 3
+
+
 def testAgentWhois_whenWhoisUnicodeError_doesNotCrash(
     scan_message_bad_character: message.Message,
     test_agent: whois_domain_agent.AgentWhoisDomain,

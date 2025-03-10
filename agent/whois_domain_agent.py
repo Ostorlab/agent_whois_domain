@@ -99,7 +99,9 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
     @tenacity.retry(
         stop=tenacity.stop_after_attempt(RETRY_NUMBER),
         wait=tenacity.wait_fixed(WAIT_TIME),
-        retry=tenacity.retry_if_exception_type((socket.gaierror, ConnectionResetError)),
+        retry=tenacity.retry_if_exception_type(
+            (socket.gaierror, ConnectionResetError, TimeoutError)
+        ),
         retry_error_callback=lambda retry_state: None,
     )
     def _fetch_whois(self, domain_name: str) -> whois.parser.WhoisCom | None:

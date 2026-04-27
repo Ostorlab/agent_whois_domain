@@ -274,10 +274,26 @@ def testAgentWhois_withBug1750_RunScan(
     bug_1750_message: message.Message,
     test_agent: whois_domain_agent.AgentWhoisDomain,
     agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
     agent_mock: List[message.Message],
 ) -> None:
     """Tests running the agent and emitting vulnerabilities."""
     del agent_persist_mock
+
+    mocker.patch(
+        "whois.whois",
+        return_value={
+            "domain_name": "ostorlab.co",
+            "updated_date": datetime.datetime.fromisoformat("2023-01-30 06:57:45"),
+            "creation_date": datetime.datetime.fromisoformat("2015-01-27 22:03:32"),
+            "expiration_date": datetime.datetime.fromisoformat("2027-01-26 23:59:59"),
+            "email": [
+                "compliance@tucows.com",
+                "easydns@myprivacy.ca",
+            ],
+            "address": "REDACTED FOR PRIVACY",
+        },
+    )
 
     test_agent.start()
     test_agent.process(bug_1750_message)
@@ -299,10 +315,18 @@ def testAgentWhois_withBug3001_RunScan(
     bug_3001_message: message.Message,
     test_agent: whois_domain_agent.AgentWhoisDomain,
     agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
     agent_mock: List[message.Message],
 ) -> None:
     """Tests running the agent and emitting vulnerabilities."""
     del agent_persist_mock
+
+    mocker.patch(
+        "whois.whois",
+        return_value={
+            "domain_name": "rexel.it",
+        },
+    )
 
     test_agent.start()
     test_agent.process(bug_3001_message)
@@ -424,6 +448,13 @@ def testAgentWhois_whenDomainNameAssetInvalidTLD_emitsMessages(
 ) -> None:
     """Tests running the agent and emitting vulnerabilities."""
     del agent_persist_mock
+
+    mocker.patch(
+        "whois.whois",
+        return_value={
+            "domain_name": "electrohold.bg",
+        },
+    )
 
     test_agent.start()
     test_agent.process(electro_scan_message)

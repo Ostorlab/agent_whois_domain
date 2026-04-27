@@ -1,7 +1,6 @@
 """Pytest fixture for the whois domain agent."""
 
 import pathlib
-import random
 import json
 
 import pytest
@@ -65,7 +64,7 @@ def test_agent() -> whois_domain_agent.AgentWhoisDomain:
             bus_exchange_topic="NA",
             redis_url="redis://redis",
             args=[],
-            healthcheck_port=random.randint(4000, 5000),
+            healthcheck_port=0,
         )
         return whois_domain_agent.AgentWhoisDomain(definition, settings)
 
@@ -88,7 +87,7 @@ def test_agent_with_scope_arg() -> whois_domain_agent.AgentWhoisDomain:
                     value=json.dumps(".*medallia.com").encode(),
                 ),
             ],
-            healthcheck_port=random.randint(4000, 5000),
+            healthcheck_port=0,
         )
         return whois_domain_agent.AgentWhoisDomain(definition, settings)
 

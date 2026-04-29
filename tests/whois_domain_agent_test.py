@@ -530,8 +530,9 @@ def testAgentWhois_whenFetchWhoisReturnsNone_returnsEarly(
 ) -> None:
     """The agent should return early when fetch_whois returns None."""
     del agent_persist_mock
-    mocker.patch.object(
-        whois_domain_agent.AgentWhoisDomain, "_fetch_whois", return_value=None
+    mocker.patch(
+        "whois.whois",
+        side_effect=None,
     )
 
     test_agent.start()

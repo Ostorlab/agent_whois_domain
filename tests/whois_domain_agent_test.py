@@ -532,7 +532,7 @@ def testAgentWhois_whenFetchWhoisReturnsNone_returnsEarly(
     del agent_persist_mock
     mocker.patch(
         "whois.whois",
-        side_effect=None,
+        return_value=None,
     )
 
     test_agent.start()

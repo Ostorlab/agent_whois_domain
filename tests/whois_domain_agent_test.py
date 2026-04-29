@@ -6,6 +6,7 @@ from typing import List, Any
 import pytest
 from ostorlab.agent.message import message
 from pytest_mock import plugin
+from whois import exceptions as whois_exceptions
 
 from agent import whois_domain_agent
 
@@ -509,7 +510,9 @@ def testAgentWhois_whenPywhoisError_logsError(
     del agent_persist_mock
     mocker.patch(
         "whois.whois",
-        side_effect=whois_domain_agent.whois_exceptions.PywhoisError("Error message produced by whois exception"),
+        side_effect=whois_exceptions.PywhoisError(
+            "Error message produced by whois exception"
+        ),
     )
 
     test_agent.start()

@@ -14,6 +14,7 @@ from ostorlab.agent.mixins import agent_persist_mixin as persist_mixin
 from ostorlab.runtimes import definitions as runtime_definitions
 from rich import logging as rich_logging
 from whois import parser
+from whois import exceptions as whois_exceptions
 
 from agent import result_parser
 
@@ -76,7 +77,7 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
                 if scan_output is None:
                     return
                 self._emit_result(scan_output)
-            except parser.PywhoisError as e:
+            except whois_exceptions.PywhoisError as e:
                 logger.error(e)
         else:
             logger.error("domain is not a valid URL: %s", domain)

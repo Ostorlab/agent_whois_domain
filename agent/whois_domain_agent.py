@@ -13,7 +13,6 @@ from ostorlab.agent.message import message as msg
 from ostorlab.agent.mixins import agent_persist_mixin as persist_mixin
 from ostorlab.runtimes import definitions as runtime_definitions
 from rich import logging as rich_logging
-from whois import parser
 from whois import exceptions as whois_exceptions
 
 from agent import result_parser

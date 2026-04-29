@@ -6,6 +6,7 @@ from typing import List, Any
 import pytest
 from ostorlab.agent.message import message
 from pytest_mock import plugin
+from whois import exceptions as whois_exceptions
 
 from agent import whois_domain_agent
 
@@ -496,6 +497,48 @@ def testAgentWhois_whenTimeoutError_shouldRetry(
     test_agent.process(scan_message)
 
     assert mock_whois.call_count == 3
+
+
+def testAgentWhois_whenPywhoisError_logsError(
+    scan_message: message.Message,
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """The agent should not crash when PywhoisError occurs and should log the error."""
+    del agent_persist_mock
+    mocker.patch(
+        "whois.whois",
+        side_effect=whois_exceptions.PywhoisError(
+            "Error message produced by whois exception"
+        ),
+    )
+
+    test_agent.start()
+    test_agent.process(scan_message)
+
+    assert "Error message produced by whois exception" in caplog.text
+
+
+def testAgentWhois_whenFetchWhoisReturnsNone_returnsEarly(
+    scan_message: message.Message,
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    agent_mock: List[message.Message],
+) -> None:
+    """The agent should return early when fetch_whois returns None."""
+    del agent_persist_mock
+    mocker.patch(
+        "whois.whois",
+        return_value=None,
+    )
+
+    test_agent.start()
+    test_agent.process(scan_message)
+
+    assert len(agent_mock) == 0
 
 
 def testAgentWhois_whenWhoisUnicodeError_doesNotCrash(

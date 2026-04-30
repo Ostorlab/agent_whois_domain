@@ -52,8 +52,8 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[Dict[str, Any]]:
                 "name": name,
                 "emails": [email for email in found_emails if _is_valid_email(email)],
                 "status": get_list_from_string(scan_output_dict.get("status", "")),
-                "name_servers": get_list_from_string(
-                    scan_output_dict.get("name_servers", "")
+                "name_servers": _normalize_name_servers(
+                    get_list_from_string(scan_output_dict.get("name_servers", ""))
                 ),
                 "contact_names": get_list_from_string(scan_output_dict.get("name", "")),
                 "dnssec": get_list_from_string(scan_output_dict.get("dnssec", "")),
@@ -111,6 +111,21 @@ def get_list_from_string(scan_output_value: Union[str, List[str]]) -> List[str]:
 def _format_str(value: str | List[str]) -> str:
     """Handles string or list of strings and returns a single string."""
     return value if isinstance(value, str) else " ".join(value)
+
+
+def _normalize_name_servers(name_servers: list[str]) -> list[str]:
+    """Normalizes name servers to lowercase and removes duplicates.
+
+    Args:
+        name_servers: List of name server strings.
+
+    Returns:
+        A deduplicated list of name servers in lowercase.
+    """
+    seen = set()
+    for ns in name_servers:
+        seen.add(ns.lower())
+    return list(seen)
 
 
 def _is_valid_email(value: str) -> bool:

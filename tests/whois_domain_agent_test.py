@@ -561,12 +561,21 @@ def testAgentWhois_whenWhoisUnicodeError_doesNotCrash(
     assert len(agent_mock) == 0
 
 
-def testNormalizeNameServers_whenMixedCaseAndDuplicates_returnsLowercaseUnique() -> (
-    None
-):
-    """_normalize_name_servers should lowercase and deduplicate name server entries."""
-    name_servers = ["NS1.EXAMPLE.COM", "ns1.example.com", "NS2.Example.Com"]
+def testParseResults_whenMixedCaseNameServers_returnsLowercaseUnique() -> None:
+    """parse_results should lowercase and deduplicate name server entries."""
+    scan_output = {
+        "domain_name": "test.ostorlab.co",
+        "name_servers": [
+            "NS1.EXAMPLE.COM",
+            "ns1.example.com",
+            "NS2.Example.Com",
+        ],
+    }
 
-    result = result_parser._normalize_name_servers(name_servers)
+    results = list(result_parser.parse_results(scan_output))
 
-    assert sorted(result) == ["ns1.example.com", "ns2.example.com"]
+    assert len(results) == 1
+    assert sorted(results[0]["name_servers"]) == [
+        "ns1.example.com",
+        "ns2.example.com",
+    ]

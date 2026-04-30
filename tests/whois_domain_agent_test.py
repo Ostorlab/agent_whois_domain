@@ -9,6 +9,7 @@ from pytest_mock import plugin
 from whois import exceptions as whois_exceptions
 
 from agent import whois_domain_agent
+from agent import result_parser
 
 SCAN_OUTPUT = {
     "domain_name": "test.ostorlab.co",
@@ -558,3 +559,23 @@ def testAgentWhois_whenWhoisUnicodeError_doesNotCrash(
 
     assert "Unicode error when fetching whois for" in caplog.text
     assert len(agent_mock) == 0
+
+
+def testParseResults_whenMixedCaseNameServers_returnsLowercaseUnique() -> None:
+    """parse_results should lowercase and deduplicate name server entries."""
+    scan_output = {
+        "domain_name": "test.ostorlab.co",
+        "name_servers": [
+            "NS1.EXAMPLE.COM",
+            "ns1.example.com",
+            "NS2.Example.Com",
+        ],
+    }
+
+    results = list(result_parser.parse_results(scan_output))
+
+    assert len(results) == 1
+    assert sorted(results[0]["name_servers"]) == [
+        "ns1.example.com",
+        "ns2.example.com",
+    ]

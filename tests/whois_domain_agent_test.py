@@ -561,7 +561,9 @@ def testAgentWhois_whenWhoisUnicodeError_doesNotCrash(
     assert len(agent_mock) == 0
 
 
-def testNormalizeNameServers_whenMixedCaseAndDuplicates_returnsLowercaseUnique() -> None:
+def testNormalizeNameServers_whenMixedCaseAndDuplicates_returnsLowercaseUnique() -> (
+    None
+):
     """_normalize_name_servers should lowercase and deduplicate name server entries."""
     name_servers = ["NS1.EXAMPLE.COM", "ns1.example.com", "NS2.Example.Com"]
 

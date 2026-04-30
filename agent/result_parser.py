@@ -108,16 +108,9 @@ def get_list_from_string(scan_output_value: Union[str, List[str]]) -> List[str]:
         return scan_output_value or []
 
 
-def _normalize_name_servers(name_servers: List[str]) -> List[str]:
+def _normalize_name_servers(name_servers: list[str]) -> list[str]:
     """Normalizes name servers to lowercase and removes duplicates."""
-    seen = set()
-    result = []
-    for ns in name_servers:
-        normalized = ns.lower()
-        if normalized not in seen:
-            seen.add(normalized)
-            result.append(normalized)
-    return result
+    return list({ns.lower() for ns in name_servers})
 
 
 def _format_str(value: str | List[str]) -> str:

@@ -46,7 +46,7 @@ oxo scan run --agent agent/ostorlab/whois_domain domain-name tesla.com
 
 ### Build directly from the repository
 
- 1. To build the whois_domain agent you need to have [oxo](https://pypi.org/project/ostorlab/) installed in your machine.  if you have already installed oxo, you can skip this step.
+ 1. To build the whois_domain agent you need to have [oxo](https://pypi.org/project/ostorlab/) installed on your machine. If you have already installed oxo, you can skip this step.
 
 ```shell
 pip3 install ostorlab
@@ -65,10 +65,10 @@ git clone https://github.com/Ostorlab/agent_whois_domain.git && cd agent_whois_d
  ```
  You can pass the optional flag `--organization` to specify your organisation. The organization is empty by default.
 
- 1. Run the agent using on of the following commands:
+ 4. Run the agent using one of the following commands:
 	 * If you did not specify an organization when building the image:
 	  ```shell
-	  oxo scan run --agent agent//whois_domain domain-name tesla.com
+	  oxo scan run --agent agent/ostorlab/whois_domain domain-name tesla.com
 	  ```
 	 * If you specified an organization when building the image:
 	  ```shell

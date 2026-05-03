@@ -1,5 +1,5 @@
 ostorlab[agent]
 rich
-python-whois
+python-whois>=0.9.6
 tld
 email-validator

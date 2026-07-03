@@ -42,4 +42,4 @@ jobs:
     - name: Runnning tests with pytest.
       run: |
         set -o pipefail
-        pytest -m
+        pytest -m "not docker"

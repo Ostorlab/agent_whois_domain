@@ -1,15 +1,14 @@
 """Unittests for whois_domain agent."""
 
 import datetime
-from typing import List, Any
+from typing import Any
 
 import pytest
 from ostorlab.agent.message import message
 from pytest_mock import plugin
 from whois import exceptions as whois_exceptions
 
-from agent import whois_domain_agent
-from agent import result_parser
+from agent import result_parser, whois_domain_agent
 
 SCAN_OUTPUT = {
     "domain_name": "test.ostorlab.co",
@@ -107,9 +106,9 @@ SCAN_OUTPUT_MULTIPLE_CONTACT_NAMES = {
     "phone": ["+442087186494", "+33142789312"],
     "fax": "+440207487267",
     "updated_date": [
-        datetime.datetime(2021, 6, 23, 10, 10, 57),
-        datetime.datetime(2021, 6, 23, 10, 7, 2),
-        datetime.datetime(2023, 1, 4, 19, 30, 24),
+        datetime.datetime(2021, 6, 23, 10, 10, 57),  # noqa: DTZ001  naive datetime mirrors whois library output
+        datetime.datetime(2021, 6, 23, 10, 7, 2),  # noqa: DTZ001  naive datetime mirrors whois library output
+        datetime.datetime(2023, 1, 4, 19, 30, 24),  # noqa: DTZ001  naive datetime mirrors whois library output
     ],
     "email": ["externaldnssupport@marks-and-spencer.com", "ivan.sly@iptwins.com"],
 }
@@ -126,9 +125,9 @@ SCAN_OUTPUT_NO_CONTACT_NAMES = {
     "phone": ["+442087186494", "+33142789312"],
     "fax": "+440207487267",
     "updated_date": [
-        datetime.datetime(2021, 6, 23, 10, 10, 57),
-        datetime.datetime(2021, 6, 23, 10, 7, 2),
-        datetime.datetime(2023, 1, 4, 19, 30, 24),
+        datetime.datetime(2021, 6, 23, 10, 10, 57),  # noqa: DTZ001  naive datetime mirrors whois library output
+        datetime.datetime(2021, 6, 23, 10, 7, 2),  # noqa: DTZ001  naive datetime mirrors whois library output
+        datetime.datetime(2023, 1, 4, 19, 30, 24),  # noqa: DTZ001  naive datetime mirrors whois library output
     ],
     "email": ["externaldnssupport@marks-and-spencer.com", "ivan.sly@iptwins.com"],
 }
@@ -139,7 +138,7 @@ def testAgentWhois_whenDomainNameAsset_emitsMessages(
     test_agent: whois_domain_agent.AgentWhoisDomain,
     agent_persist_mock: Any,
     mocker: plugin.MockerFixture,
-    agent_mock: List[message.Message],
+    agent_mock: list[message.Message],
 ) -> None:
     """Tests running the agent and emitting vulnerabilities."""
     del agent_persist_mock
@@ -162,7 +161,7 @@ def testAgentWhois_whenMultipleContactNames_emitsMessages(
     test_agent: whois_domain_agent.AgentWhoisDomain,
     agent_persist_mock: Any,
     mocker: plugin.MockerFixture,
-    agent_mock: List[message.Message],
+    agent_mock: list[message.Message],
 ) -> None:
     """Tests running the agent and emitting vulnerabilities."""
     del agent_persist_mock
@@ -194,7 +193,7 @@ def testAgentWhois_whenNoContactNames_emitsMessages(
     test_agent: whois_domain_agent.AgentWhoisDomain,
     agent_persist_mock: Any,
     mocker: plugin.MockerFixture,
-    agent_mock: List[message.Message],
+    agent_mock: list[message.Message],
 ) -> None:
     """Tests running the agent and emitting vulnerabilities."""
     del agent_persist_mock
@@ -224,7 +223,7 @@ def testAgentWhois_whenDomainNameInputIsEmpty_NotEmitsMessages(
     test_agent: whois_domain_agent.AgentWhoisDomain,
     agent_persist_mock: Any,
     mocker: plugin.MockerFixture,
-    agent_mock: List[message.Message],
+    agent_mock: list[message.Message],
 ) -> None:
     """Tests running the agent and emitting vulnerabilities."""
     del agent_persist_mock
@@ -241,7 +240,7 @@ def testAgentWhois_whenDomainNameIsEmpty_notEmitsMessages(
     test_agent: whois_domain_agent.AgentWhoisDomain,
     agent_persist_mock: Any,
     mocker: plugin.MockerFixture,
-    agent_mock: List[message.Message],
+    agent_mock: list[message.Message],
 ) -> None:
     """Tests running the agent and emitting vulnerabilities."""
     del agent_persist_mock
@@ -258,7 +257,7 @@ def testAgentWhois_whenDomainNameListAsset_emitsMessages(
     test_agent: whois_domain_agent.AgentWhoisDomain,
     agent_persist_mock: Any,
     mocker: plugin.MockerFixture,
-    agent_mock: List[message.Message],
+    agent_mock: list[message.Message],
 ) -> None:
     """Tests running the agent and emitting vulnerabilities."""
     del agent_persist_mock
@@ -277,7 +276,7 @@ def testAgentWhois_withBug1750_RunScan(
     test_agent: whois_domain_agent.AgentWhoisDomain,
     agent_persist_mock: Any,
     mocker: plugin.MockerFixture,
-    agent_mock: List[message.Message],
+    agent_mock: list[message.Message],
 ) -> None:
     """Tests running the agent and emitting vulnerabilities."""
     del agent_persist_mock
@@ -318,7 +317,7 @@ def testAgentWhois_withBug3001_RunScan(
     test_agent: whois_domain_agent.AgentWhoisDomain,
     agent_persist_mock: Any,
     mocker: plugin.MockerFixture,
-    agent_mock: List[message.Message],
+    agent_mock: list[message.Message],
 ) -> None:
     """Tests running the agent and emitting vulnerabilities."""
     del agent_persist_mock
@@ -342,7 +341,7 @@ def testAgentWhois_withDomainScopeArgAndDomainMessageInScope_emitsMessages(
     test_agent_with_scope_arg: whois_domain_agent.AgentWhoisDomain,
     agent_persist_mock: Any,
     mocker: plugin.MockerFixture,
-    agent_mock: List[message.Message],
+    agent_mock: list[message.Message],
 ) -> None:
     """Ensure the domain scope argument is enforced, and domains in the scope should be scanned."""
     del agent_persist_mock
@@ -367,7 +366,7 @@ def testAgentWhois_withDomainScopeArgAndDomainMessageNotInScope_targetShouldNotB
     test_agent_with_scope_arg: whois_domain_agent.AgentWhoisDomain,
     agent_persist_mock: Any,
     mocker: plugin.MockerFixture,
-    agent_mock: List[message.Message],
+    agent_mock: list[message.Message],
 ) -> None:
     """Ensure the domain scope argument is enforced, and domains not in the scope should not be scanned."""
     del agent_persist_mock
@@ -389,7 +388,7 @@ def testAgentWhois_whenDifferentSubdomainsRecevied_onlyFldIsProcessed(
     test_agent: whois_domain_agent.AgentWhoisDomain,
     agent_persist_mock: Any,
     mocker: plugin.MockerFixture,
-    agent_mock: List[message.Message],
+    agent_mock: list[message.Message],
 ) -> None:
     """Tests running the agent and emitting vulnerabilities."""
     del agent_persist_mock
@@ -446,7 +445,7 @@ def testAgentWhois_whenDomainNameAssetInvalidTLD_emitsMessages(
     test_agent: whois_domain_agent.AgentWhoisDomain,
     agent_persist_mock: Any,
     mocker: plugin.MockerFixture,
-    agent_mock: List[message.Message],
+    agent_mock: list[message.Message],
 ) -> None:
     """Tests running the agent and emitting vulnerabilities."""
     del agent_persist_mock
@@ -471,7 +470,7 @@ def testAgentWhois_whenConnectionError_shouldRetry(
     test_agent: whois_domain_agent.AgentWhoisDomain,
     agent_persist_mock: Any,
     mocker: plugin.MockerFixture,
-    agent_mock: List[message.Message],
+    agent_mock: list[message.Message],
 ) -> None:
     """Tests running the agent shouldn't crash when connection error occur."""
     del agent_persist_mock
@@ -527,7 +526,7 @@ def testAgentWhois_whenFetchWhoisReturnsNone_returnsEarly(
     test_agent: whois_domain_agent.AgentWhoisDomain,
     agent_persist_mock: Any,
     mocker: plugin.MockerFixture,
-    agent_mock: List[message.Message],
+    agent_mock: list[message.Message],
 ) -> None:
     """The agent should return early when fetch_whois returns None."""
     del agent_persist_mock
@@ -547,7 +546,7 @@ def testAgentWhois_whenWhoisUnicodeError_doesNotCrash(
     test_agent: whois_domain_agent.AgentWhoisDomain,
     agent_persist_mock: Any,
     mocker: plugin.MockerFixture,
-    agent_mock: List[message.Message],
+    agent_mock: list[message.Message],
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """The agent should not crash when UnicodeError occurs."""

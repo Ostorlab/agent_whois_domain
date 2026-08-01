@@ -1,12 +1,12 @@
 """Pytest fixture for the whois domain agent."""
 
-import pathlib
 import json
+import pathlib
 
 import pytest
 from ostorlab.agent import definitions as agent_definitions
-from ostorlab.runtimes import definitions as runtime_definitions
 from ostorlab.agent.message import message
+from ostorlab.runtimes import definitions as runtime_definitions
 from ostorlab.utils import definitions
 
 from agent import whois_domain_agent

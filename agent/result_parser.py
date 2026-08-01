@@ -1,10 +1,11 @@
 """Module to parse whois_domain scan results."""
 
 import datetime
-from typing import Any, Union, List, Dict, Iterator
+from collections.abc import Iterator
+from typing import Any
 
-import whois
 import email_validator
+import whois
 
 OPTIONAL_FIELDS = [
     "registrar",
@@ -21,7 +22,7 @@ OPTIONAL_FIELDS = [
 UNDISCLOSED_VALUE = "<data not disclosed>"
 
 
-def parse_results(results: whois.parser.WhoisCom) -> Iterator[Dict[str, Any]]:
+def parse_results(results: whois.parser.WhoisCom) -> Iterator[dict[str, Any]]:
     """Parses whois_domain scan results.
 
     Args:
@@ -67,8 +68,8 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[Dict[str, Any]]:
 
 
 def get_isoformat(
-    date_name: Union[datetime.datetime, List[datetime.datetime]],
-) -> List[str]:
+    date_name: datetime.datetime | list[datetime.datetime],
+) -> list[str]:
     """Converts dates to ISO format
 
     Args:
@@ -91,7 +92,7 @@ def get_isoformat(
         return []
 
 
-def get_list_from_string(scan_output_value: Union[str, List[str]]) -> List[str]:
+def get_list_from_string(scan_output_value: str | list[str]) -> list[str]:
     """Checks if the value of an attribute is a string and puts it in a list.
 
     Args:
@@ -113,7 +114,7 @@ def _normalize_name_servers(name_servers: list[str]) -> list[str]:
     return list({ns.lower() for ns in name_servers})
 
 
-def _format_str(value: str | List[str]) -> str:
+def _format_str(value: str | list[str]) -> str:
     """Handles string or list of strings and returns a single string."""
     return value if isinstance(value, str) else " ".join(value)
 

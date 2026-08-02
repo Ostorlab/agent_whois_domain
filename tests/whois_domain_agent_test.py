@@ -499,6 +499,24 @@ def testAgentWhois_whenTimeoutError_shouldRetry(
     assert mock_whois.call_count == 3
 
 
+def testAgentWhois_whenConnectionRefusedError_shouldRetry(
+    scan_message: message.Message,
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """Tests running the agent shouldn't crash when connection is refused by the whois server."""
+    del agent_persist_mock
+    mocker.patch("time.sleep")
+    mock_whois = mocker.patch("whois.whois", side_effect=ConnectionRefusedError)
+
+    test_agent.process(scan_message)
+
+    assert mock_whois.call_count == 3
+    assert len(agent_mock) == 0
+
+
 def testAgentWhois_whenPywhoisError_logsError(
     scan_message: message.Message,
     test_agent: whois_domain_agent.AgentWhoisDomain,

@@ -101,7 +101,7 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
         stop=tenacity.stop_after_attempt(RETRY_NUMBER),
         wait=tenacity.wait_fixed(WAIT_TIME),
         retry=tenacity.retry_if_exception_type(
-            (socket.gaierror, ConnectionResetError, TimeoutError)
+            (socket.gaierror, ConnectionError, TimeoutError)
         ),
         retry_error_callback=lambda retry_state: None,
     )

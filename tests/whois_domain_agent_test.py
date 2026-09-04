@@ -8,7 +8,10 @@ from ostorlab.agent.message import message
 from pytest_mock import plugin
 from whois import exceptions as whois_exceptions
 
-from agent import result_parser, whois_domain_agent
+from agent import (
+    result_parser,
+    whois_domain_agent,
+)
 
 SCAN_OUTPUT = {
     "domain_name": "test.ostorlab.co",

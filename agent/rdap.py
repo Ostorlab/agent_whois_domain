@@ -9,6 +9,7 @@ needs WHOIS for the registrant's organisation and country.
 import http.client
 import json
 import logging
+import time
 import typing
 import urllib.request
 
@@ -16,6 +17,8 @@ logger = logging.getLogger(__name__)
 
 BOOTSTRAP_URL = "https://data.iana.org/rdap/dns.json"
 TIMEOUT = 20
+# How long an unreadable bootstrap registry is left alone before trying again.
+RETRY_AFTER = 60
 # The words whois reports for the same state, so both sources read alike.
 SIGNED = "signedDelegation"
 UNSIGNED = "unsigned"
@@ -28,6 +31,7 @@ EVENT_FIELDS = {
 
 
 _SERVERS: dict[str, str] = {}
+_FAILED_AT = 0.0
 
 
 def _bootstrap() -> dict[str, str]:
@@ -35,14 +39,19 @@ def _bootstrap() -> dict[str, str]:
 
     A reading is kept, as the registry is around a megabyte and changes rarely.
     A failed reading is not, so an outage does not disable RDAP for the rest of
-    the agent's life.
+    the agent's life, but it is not retried for every domain either: a reading
+    is attempted again only once the retry window has passed.
 
     Returns:
         The server of each TLD that has one, empty when the registry could not
         be read.
     """
+    global _FAILED_AT
+
     if len(_SERVERS) > 0:
         return _SERVERS
+    if time.monotonic() - _FAILED_AT < RETRY_AFTER:
+        return {}
 
     try:
         with urllib.request.urlopen(BOOTSTRAP_URL, timeout=TIMEOUT) as response:
@@ -52,6 +61,7 @@ def _bootstrap() -> dict[str, str]:
         ValueError,
         http.client.HTTPException,
     ) as e:
+        _FAILED_AT = time.monotonic()
         logger.warning("Could not read the RDAP bootstrap registry: %s", e)
         return {}
 
@@ -110,7 +120,11 @@ def _vcard(entity: dict[str, typing.Any], name: str) -> typing.Any:
     A registry that redacts a property keeps it with an empty value, which
     reads the same as the property being absent.
     """
-    for entry in entity.get("vcardArray", [[], []])[1]:
+    vcard = entity.get("vcardArray")
+    if not isinstance(vcard, list) or len(vcard) < 2:
+        return None
+
+    for entry in vcard[1]:
         if entry[0] == name and entry[3] != "":
             return entry[3]
     return None
@@ -158,8 +172,10 @@ def parse(response: dict[str, typing.Any]) -> dict[str, typing.Any]:
         parsed["status"] = status
 
     # RFC 9083 reports the chain as a flag rather than the word whois returns.
-    delegation_signed = response.get("secureDNS", {}).get("delegationSigned")
-    if delegation_signed is not None:
-        parsed["dnssec"] = [SIGNED if delegation_signed is True else UNSIGNED]
+    secure_dns = response.get("secureDNS")
+    if isinstance(secure_dns, dict):
+        delegation_signed = secure_dns.get("delegationSigned")
+        if delegation_signed is not None:
+            parsed["dnssec"] = [SIGNED if delegation_signed is True else UNSIGNED]
 
     return parsed

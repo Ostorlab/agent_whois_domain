@@ -10,8 +10,9 @@ from agent import rdap
 
 @pytest.fixture(autouse=True)
 def clear_bootstrap_cache() -> None:
-    """Keep a reading made by one test out of the next."""
+    """Keep a reading, or a failure, made by one test out of the next."""
     rdap._SERVERS.clear()
+    rdap._FAILED_AT = 0.0
 
 
 RDAP_RESPONSE: dict[str, Any] = {
@@ -150,6 +151,7 @@ def testRdapBootstrap_whenTheRegistryIsUnreachable_readsItAgainNextTime(
     urlopen = mocker.patch("urllib.request.urlopen", side_effect=OSError("down"))
 
     assert rdap._bootstrap() == {}
+    rdap._FAILED_AT = 0.0  # as if the retry window had passed
     assert rdap._bootstrap() == {}
 
     assert urlopen.call_count == 2
@@ -169,3 +171,30 @@ def testRdapBootstrap_whenTheRegistryIsRead_keepsIt(
     assert rdap._bootstrap() == {"com": "https://rdap.example/com"}
 
     assert urlopen.call_count == 1
+
+
+def testRdapBootstrap_whenAReadingJustFailed_doesNotDownloadItAgain(
+    mocker: plugin.MockerFixture,
+) -> None:
+    """Ensure that an outage does not stall every domain on the download."""
+    urlopen = mocker.patch("urllib.request.urlopen", side_effect=OSError("down"))
+
+    assert rdap._bootstrap() == {}
+    assert rdap._bootstrap() == {}
+
+    assert urlopen.call_count == 1
+
+
+def testRdapParse_whenSecureDnsIsNull_leavesDnssecOut() -> None:
+    """Ensure that a null secureDNS is treated as absent rather than raising."""
+    assert "dnssec" not in rdap.parse({"secureDNS": None})
+
+
+def testRdapParse_whenTheVcardIsMalformed_leavesTheRegistrarOut() -> None:
+    """Ensure that a redacted vCard is skipped rather than raising."""
+    for vcard in ([], None, ["vcard"]):
+        parsed = rdap.parse(
+            {"entities": [{"roles": ["registrar"], "vcardArray": vcard}]}
+        )
+
+        assert "registrar" not in parsed

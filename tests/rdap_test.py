@@ -12,7 +12,7 @@ from agent import rdap
 def clear_bootstrap_cache() -> None:
     """Keep a reading, or a failure, made by one test out of the next."""
     rdap._SERVERS.clear()
-    rdap._FAILED_AT = 0.0
+    rdap._FAILED_AT = None
 
 
 RDAP_RESPONSE: dict[str, Any] = {
@@ -151,7 +151,7 @@ def testRdapBootstrap_whenTheRegistryIsUnreachable_readsItAgainNextTime(
     urlopen = mocker.patch("urllib.request.urlopen", side_effect=OSError("down"))
 
     assert rdap._bootstrap() == {}
-    rdap._FAILED_AT = 0.0  # as if the retry window had passed
+    rdap._FAILED_AT = None  # as if the retry window had passed
     assert rdap._bootstrap() == {}
 
     assert urlopen.call_count == 2
@@ -260,3 +260,15 @@ def testRdapBootstrap_whenAServiceHasNoServer_skipsIt(
     )
 
     assert rdap._bootstrap() == {"com": "https://rdap.example/com"}
+
+
+def testRdapBootstrap_whenTheMachineJustBooted_stillReadsTheRegistry(
+    mocker: plugin.MockerFixture,
+) -> None:
+    """Ensure the retry window does not hold on a clock that started near zero."""
+    mocker.patch("time.monotonic", return_value=3.0)
+    urlopen = mocker.patch("urllib.request.urlopen", side_effect=OSError("down"))
+
+    rdap._bootstrap()
+
+    assert urlopen.call_count == 1

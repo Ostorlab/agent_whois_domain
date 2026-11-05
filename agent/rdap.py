@@ -31,7 +31,7 @@ EVENT_FIELDS = {
 
 
 _SERVERS: dict[str, str] = {}
-_FAILED_AT = 0.0
+_FAILED_AT: float | None = None
 
 
 def _bootstrap() -> dict[str, str]:
@@ -50,7 +50,7 @@ def _bootstrap() -> dict[str, str]:
 
     if len(_SERVERS) > 0:
         return _SERVERS
-    if time.monotonic() - _FAILED_AT < RETRY_AFTER:
+    if _FAILED_AT is not None and time.monotonic() - _FAILED_AT < RETRY_AFTER:
         return {}
 
     try:

@@ -65,13 +65,15 @@ def _bootstrap() -> dict[str, str]:
         logger.warning("Could not read the RDAP bootstrap registry: %s", e)
         return {}
 
-    _SERVERS.update(
-        {
-            tld.lower(): service[1][0].rstrip("/")
-            for service in registry.get("services", [])
-            for tld in service[0]
-        }
-    )
+    if not isinstance(registry, dict):
+        logger.warning("The RDAP bootstrap registry is not an object")
+        return {}
+
+    for service in registry.get("services", []):
+        if len(service) < 2 or len(service[1]) == 0:
+            continue
+        for tld in service[0]:
+            _SERVERS[tld.lower()] = service[1][0].rstrip("/")
     return _SERVERS
 
 
@@ -114,6 +116,18 @@ def fetch(domain: str) -> dict[str, typing.Any] | None:
         return None
 
 
+def _dicts(value: typing.Any) -> list[dict[str, typing.Any]]:
+    """Read a response member as a list of objects.
+
+    A registry may send any of these members as null, as a single object or as
+    a list holding something other than objects, so anything else reads as an
+    empty list.
+    """
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]
+
+
 def _vcard(entity: dict[str, typing.Any], name: str) -> typing.Any:
     """Read one property out of an entity's jCard.
 
@@ -144,16 +158,20 @@ def parse(response: dict[str, typing.Any]) -> dict[str, typing.Any]:
     """
     parsed: dict[str, typing.Any] = {}
 
-    entities = response.get("entities", [])
     registrar = next(
-        (entity for entity in entities if "registrar" in entity.get("roles", [])), None
+        (
+            entity
+            for entity in _dicts(response.get("entities"))
+            if "registrar" in (entity.get("roles") or [])
+        ),
+        None,
     )
     if registrar is not None:
         name = _vcard(registrar, "fn")
         if name is not None:
             parsed["registrar"] = name
 
-    for event in response.get("events", []):
+    for event in _dicts(response.get("events")):
         field = EVENT_FIELDS.get(event.get("eventAction", ""))
         date = event.get("eventDate")
         if field is not None and date is not None:
@@ -161,14 +179,16 @@ def parse(response: dict[str, typing.Any]) -> dict[str, typing.Any]:
 
     name_servers = [
         server["ldhName"].lower()
-        for server in response.get("nameservers", [])
-        if server.get("ldhName") is not None
+        for server in _dicts(response.get("nameservers"))
+        if isinstance(server.get("ldhName"), str)
     ]
     if len(name_servers) > 0:
         parsed["name_servers"] = sorted(set(name_servers))
 
-    status = response.get("status", [])
-    if len(status) > 0:
+    status = response.get("status")
+    if isinstance(status, str):
+        status = [status]
+    if isinstance(status, list) and len(status) > 0:
         parsed["status"] = status
 
     # RFC 9083 reports the chain as a flag rather than the word whois returns.

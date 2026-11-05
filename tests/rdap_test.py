@@ -198,3 +198,65 @@ def testRdapParse_whenTheVcardIsMalformed_leavesTheRegistrarOut() -> None:
         )
 
         assert "registrar" not in parsed
+
+
+MALFORMED: list[dict[str, Any]] = [
+    {"entities": None},
+    {"entities": "registrar"},
+    {"entities": [None]},
+    {"entities": [{"roles": None}]},
+    {"entities": [{"roles": "registrar"}]},
+    {"events": None},
+    {"events": [None]},
+    {"events": "registration"},
+    {"nameservers": None},
+    {"nameservers": [None]},
+    {"nameservers": [{"ldhName": None}]},
+    {"status": None},
+    {"secureDNS": None},
+    {"secureDNS": "signed"},
+]
+
+
+@pytest.mark.parametrize("response", MALFORMED)
+def testRdapParse_whenTheResponseIsMalformed_readsItAsEmpty(
+    response: dict[str, Any],
+) -> None:
+    """Ensure that no shape a registry can send escapes as an exception."""
+    assert rdap.parse(response) == {}
+
+
+def testRdapParse_whenStatusIsAString_emitsItAsAList() -> None:
+    """Ensure that the field keeps one shape whichever source answered."""
+    parsed = rdap.parse({"status": "client transfer prohibited"})
+
+    assert parsed["status"] == ["client transfer prohibited"]
+
+
+def testRdapBootstrap_whenTheRegistryIsMalformed_readsItAsEmpty(
+    mocker: plugin.MockerFixture,
+) -> None:
+    """Ensure that a payload that is not the registry does not raise."""
+    response = mocker.MagicMock()
+    response.__enter__.return_value = response
+    mocker.patch("urllib.request.urlopen", return_value=response)
+    mocker.patch("json.load", return_value=["not", "the", "registry"])
+
+    assert rdap._bootstrap() == {}
+
+
+def testRdapBootstrap_whenAServiceHasNoServer_skipsIt(
+    mocker: plugin.MockerFixture,
+) -> None:
+    """Ensure that a service entry carrying no URL is passed over."""
+    response = mocker.MagicMock()
+    response.__enter__.return_value = response
+    mocker.patch("urllib.request.urlopen", return_value=response)
+    mocker.patch(
+        "json.load",
+        return_value={
+            "services": [[["dead"], []], [["com"], ["https://rdap.example/com/"]]]
+        },
+    )
+
+    assert rdap._bootstrap() == {"com": "https://rdap.example/com"}

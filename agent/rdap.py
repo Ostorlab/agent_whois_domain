@@ -7,6 +7,7 @@ needs WHOIS for the registrant's organisation and country.
 """
 
 import functools
+import http.client
 import json
 import logging
 import typing
@@ -70,8 +71,15 @@ def fetch(domain: str) -> dict[str, typing.Any] | None:
         logger.info("No RDAP server for .%s, relying on whois for %s", tld, domain)
         return None
 
+    try:
+        # A URL carries the ASCII form of an internationalised domain.
+        hostname = domain.encode("idna").decode("ascii")
+    except UnicodeError as e:
+        logger.warning("Could not encode %s for an RDAP lookup: %s", domain, e)
+        return None
+
     request = urllib.request.Request(
-        f"{server}/domain/{domain}", headers={"Accept": "application/rdap+json"}
+        f"{server}/domain/{hostname}", headers={"Accept": "application/rdap+json"}
     )
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
@@ -79,6 +87,7 @@ def fetch(domain: str) -> dict[str, typing.Any] | None:
     except (
         OSError,
         ValueError,
+        http.client.HTTPException,
     ) as e:
         logger.warning("RDAP lookup failed for %s: %s", domain, e)
         return None

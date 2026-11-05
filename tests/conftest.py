@@ -17,10 +17,11 @@ from agent import rdap, whois_domain_agent
 def no_rdap_lookup(mocker: plugin.MockerFixture) -> None:
     """Keep the tests off the network.
 
-    RDAP is reached over HTTP, so a test that does not say otherwise behaves as
-    if the TLD had no RDAP server and the agent falls back to whois.
+    The bootstrap registry reads as empty, so every TLD looks like one with no
+    RDAP server and the real lookup returns without reaching the network. The
+    lookup itself is left in place, so the tests that cover it exercise it.
     """
-    mocker.patch.object(rdap, "fetch", return_value=None)
+    mocker.patch.object(rdap, "_bootstrap", return_value={})
 
 
 @pytest.fixture

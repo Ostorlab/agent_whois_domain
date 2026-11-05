@@ -14,6 +14,18 @@ from agent import (
     whois_domain_agent,
 )
 
+
+@pytest.fixture(autouse=True)
+def no_rdap_lookup(mocker: plugin.MockerFixture) -> None:
+    """Keep these tests off the network.
+
+    The bootstrap registry reads as empty, so every TLD looks like one with no
+    RDAP server and the lookup returns without reaching it. A test that wants
+    RDAP patches the lookup itself.
+    """
+    mocker.patch.object(rdap, "_bootstrap", return_value={})
+
+
 SCAN_OUTPUT = {
     "domain_name": "test.ostorlab.co",
     "registrar": "Tucows Domains Inc.",

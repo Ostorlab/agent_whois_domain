@@ -6,12 +6,10 @@ every TLD, and registries redact the registrant entity, so the caller still
 needs WHOIS for the registrant's organisation and country.
 """
 
-import functools
 import http.client
 import json
 import logging
 import typing
-import urllib.error
 import urllib.request
 
 logger = logging.getLogger(__name__)
@@ -29,30 +27,42 @@ EVENT_FIELDS = {
 }
 
 
-@functools.cache
+_SERVERS: dict[str, str] = {}
+
+
 def _bootstrap() -> dict[str, str]:
     """Map every TLD to its RDAP server, from IANA's bootstrap registry.
 
-    The registry is read once, as it is around a megabyte and changes rarely.
+    A reading is kept, as the registry is around a megabyte and changes rarely.
+    A failed reading is not, so an outage does not disable RDAP for the rest of
+    the agent's life.
 
     Returns:
-        The server of each TLD that has one, empty when the registry is unreachable.
+        The server of each TLD that has one, empty when the registry could not
+        be read.
     """
+    if len(_SERVERS) > 0:
+        return _SERVERS
+
     try:
         with urllib.request.urlopen(BOOTSTRAP_URL, timeout=TIMEOUT) as response:
             registry = json.load(response)
     except (
         OSError,
         ValueError,
+        http.client.HTTPException,
     ) as e:
         logger.warning("Could not read the RDAP bootstrap registry: %s", e)
         return {}
 
-    return {
-        tld.lower(): service[1][0].rstrip("/")
-        for service in registry.get("services", [])
-        for tld in service[0]
-    }
+    _SERVERS.update(
+        {
+            tld.lower(): service[1][0].rstrip("/")
+            for service in registry.get("services", [])
+            for tld in service[0]
+        }
+    )
+    return _SERVERS
 
 
 def fetch(domain: str) -> dict[str, typing.Any] | None:
@@ -65,17 +75,18 @@ def fetch(domain: str) -> dict[str, typing.Any] | None:
         The RDAP response, None when the TLD has no RDAP server or the lookup
         did not answer.
     """
-    tld = domain.rsplit(".", 1)[-1].lower()
-    server = _bootstrap().get(tld)
-    if server is None:
-        logger.info("No RDAP server for .%s, relying on whois for %s", tld, domain)
-        return None
-
     try:
-        # A URL carries the ASCII form of an internationalised domain.
+        # The registry keys TLDs by their A-label and a URL carries the ASCII
+        # form, so an internationalised domain is encoded before either.
         hostname = domain.encode("idna").decode("ascii")
     except UnicodeError as e:
         logger.warning("Could not encode %s for an RDAP lookup: %s", domain, e)
+        return None
+
+    tld = hostname.rsplit(".", 1)[-1].lower()
+    server = _bootstrap().get(tld)
+    if server is None:
+        logger.info("No RDAP server for .%s, relying on whois for %s", tld, domain)
         return None
 
     request = urllib.request.Request(

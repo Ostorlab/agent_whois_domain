@@ -8,20 +8,8 @@ from ostorlab.agent import definitions as agent_definitions
 from ostorlab.agent.message import message
 from ostorlab.runtimes import definitions as runtime_definitions
 from ostorlab.utils import definitions
-from pytest_mock import plugin
 
-from agent import rdap, whois_domain_agent
-
-
-@pytest.fixture(autouse=True)
-def no_rdap_lookup(mocker: plugin.MockerFixture) -> None:
-    """Keep the tests off the network.
-
-    The bootstrap registry reads as empty, so every TLD looks like one with no
-    RDAP server and the real lookup returns without reaching the network. The
-    lookup itself is left in place, so the tests that cover it exercise it.
-    """
-    mocker.patch.object(rdap, "_bootstrap", return_value={})
+from agent import whois_domain_agent
 
 
 @pytest.fixture

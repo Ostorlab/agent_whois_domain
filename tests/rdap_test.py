@@ -2,9 +2,17 @@
 
 from typing import Any
 
+import pytest
 from pytest_mock import plugin
 
 from agent import rdap
+
+
+@pytest.fixture(autouse=True)
+def clear_bootstrap_cache() -> None:
+    """Keep a reading made by one test out of the next."""
+    rdap._SERVERS.clear()
+
 
 RDAP_RESPONSE: dict[str, Any] = {
     "ldhName": "ebay.com",
@@ -116,3 +124,48 @@ def testRdapParse_whenTheRegistrarNameIsRedacted_leavesItOut() -> None:
     )
 
     assert "registrar" not in parsed
+
+
+def testRdapFetch_whenTldIsInternationalised_looksUpItsALabel(
+    mocker: plugin.MockerFixture,
+) -> None:
+    """Ensure that the registry is keyed by the A-label, not the unicode TLD."""
+    mocker.patch.object(
+        rdap, "_bootstrap", return_value={"xn--q9jyb4c": "https://rdap.example"}
+    )
+    urlopen = mocker.patch("urllib.request.urlopen", side_effect=OSError("stop here"))
+
+    rdap.fetch("nic.\u307f\u3093\u306a")
+
+    assert (
+        urlopen.call_args.args[0].full_url
+        == "https://rdap.example/domain/nic.xn--q9jyb4c"
+    )
+
+
+def testRdapBootstrap_whenTheRegistryIsUnreachable_readsItAgainNextTime(
+    mocker: plugin.MockerFixture,
+) -> None:
+    """Ensure that an outage does not disable RDAP for the rest of the run."""
+    urlopen = mocker.patch("urllib.request.urlopen", side_effect=OSError("down"))
+
+    assert rdap._bootstrap() == {}
+    assert rdap._bootstrap() == {}
+
+    assert urlopen.call_count == 2
+
+
+def testRdapBootstrap_whenTheRegistryIsRead_keepsIt(
+    mocker: plugin.MockerFixture,
+) -> None:
+    """Ensure that a successful reading is not fetched twice."""
+    registry = {"services": [[["com"], ["https://rdap.example/com/"]]]}
+    response = mocker.MagicMock()
+    response.__enter__.return_value = response
+    mocker.patch("urllib.request.urlopen", return_value=response)
+    urlopen = mocker.patch("json.load", return_value=registry)
+
+    assert rdap._bootstrap() == {"com": "https://rdap.example/com"}
+    assert rdap._bootstrap() == {"com": "https://rdap.example/com"}
+
+    assert urlopen.call_count == 1

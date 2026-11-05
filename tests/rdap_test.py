@@ -192,7 +192,15 @@ def testRdapParse_whenSecureDnsIsNull_leavesDnssecOut() -> None:
 
 def testRdapParse_whenTheVcardIsMalformed_leavesTheRegistrarOut() -> None:
     """Ensure that a redacted vCard is skipped rather than raising."""
-    for vcard in ([], None, ["vcard"]):
+    for vcard in (
+        [],
+        None,
+        ["vcard"],
+        ["vcard", None],
+        ["vcard", [None]],
+        ["vcard", [["fn"]]],
+        ["vcard", "fn"],
+    ):
         parsed = rdap.parse(
             {"entities": [{"roles": ["registrar"], "vcardArray": vcard}]}
         )

@@ -142,8 +142,13 @@ def _vcard(entity: dict[str, typing.Any], name: str) -> typing.Any:
     vcard = entity.get("vcardArray")
     if not isinstance(vcard, list) or len(vcard) < 2:
         return None
+    if not isinstance(vcard[1], list):
+        return None
 
     for entry in vcard[1]:
+        # A jCard property is a list of four, the value last.
+        if not isinstance(entry, list) or len(entry) < 4:
+            continue
         if entry[0] == name and entry[3] != "":
             return entry[3]
     return None

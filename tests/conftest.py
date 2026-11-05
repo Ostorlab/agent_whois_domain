@@ -8,8 +8,19 @@ from ostorlab.agent import definitions as agent_definitions
 from ostorlab.agent.message import message
 from ostorlab.runtimes import definitions as runtime_definitions
 from ostorlab.utils import definitions
+from pytest_mock import plugin
 
-from agent import whois_domain_agent
+from agent import rdap, whois_domain_agent
+
+
+@pytest.fixture(autouse=True)
+def no_rdap_lookup(mocker: plugin.MockerFixture) -> None:
+    """Keep the tests off the network.
+
+    RDAP is reached over HTTP, so a test that does not say otherwise behaves as
+    if the TLD had no RDAP server and the agent falls back to whois.
+    """
+    mocker.patch.object(rdap, "fetch", return_value=None)
 
 
 @pytest.fixture

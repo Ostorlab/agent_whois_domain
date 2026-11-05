@@ -9,6 +9,7 @@ from pytest_mock import plugin
 from whois import exceptions as whois_exceptions
 
 from agent import (
+    rdap,
     result_parser,
     whois_domain_agent,
 )
@@ -599,3 +600,117 @@ def testParseResults_whenMixedCaseNameServers_returnsLowercaseUnique() -> None:
         "ns1.example.com",
         "ns2.example.com",
     ]
+
+
+RDAP_RESPONSE: dict[str, Any] = {
+    "ldhName": "medallia.com",
+    "status": ["client transfer prohibited"],
+    "events": [
+        {"eventAction": "registration", "eventDate": "1999-03-11T05:00:00Z"},
+        {"eventAction": "expiration", "eventDate": "2027-03-11T05:00:00Z"},
+        {"eventAction": "last changed", "eventDate": "2025-02-14T11:00:00Z"},
+    ],
+    "nameservers": [{"ldhName": "NS1.MEDALLIA.COM"}],
+    "entities": [
+        {
+            "roles": ["registrar"],
+            "vcardArray": [
+                "vcard",
+                [
+                    ["version", {}, "text", "4.0"],
+                    ["fn", {}, "text", "CSC Corporate Domains"],
+                ],
+            ],
+        }
+    ],
+}
+
+
+def testAgentWhois_whenRdapAnswers_prefersItsRecordsAndKeepsTheRegistrant(
+    scan_message: message.Message,
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """Ensure that RDAP answers for the records and whois for the registrant."""
+    del agent_persist_mock
+    mocker.patch("whois.whois", return_value=SCAN_OUTPUT)
+    mocker.patch.object(rdap, "fetch", return_value=RDAP_RESPONSE)
+
+    test_agent.start()
+    test_agent.process(scan_message)
+
+    assert len(agent_mock) == 1
+    emitted = agent_mock[0].data
+    # from RDAP
+    assert emitted["registrar"] == "CSC Corporate Domains"
+    assert emitted["creation_date"] == ["1999-03-11T05:00:00Z"]
+    assert emitted["expiration_date"] == ["2027-03-11T05:00:00Z"]
+    assert emitted["updated_date"] == ["2025-02-14T11:00:00Z"]
+    assert emitted["name_servers"] == ["ns1.medallia.com"]
+    assert emitted["status"] == ["client transfer prohibited"]
+    # from whois, which RDAP redacts
+    assert emitted["org"] == SCAN_OUTPUT["org"]
+
+
+def testAgentWhois_whenRdapIsAbsent_keepsTheWhoisResult(
+    scan_message: message.Message,
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """Ensure that a TLD without RDAP is unaffected."""
+    del agent_persist_mock
+    mocker.patch("whois.whois", return_value=SCAN_OUTPUT)
+    mocker.patch.object(rdap, "fetch", return_value=None)
+
+    test_agent.start()
+    test_agent.process(scan_message)
+
+    assert len(agent_mock) == 1
+    assert agent_mock[0].data["registrar"] == SCAN_OUTPUT["registrar"]
+    assert agent_mock[0].data["org"] == SCAN_OUTPUT["org"]
+
+
+def testAgentWhois_whenWhoisFailsAndRdapAnswers_stillEmits(
+    scan_message: message.Message,
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """Ensure that a domain whois cannot parse is still reported from RDAP."""
+    del agent_persist_mock
+    mocker.patch(
+        "whois.whois", side_effect=whois_exceptions.WhoisCommandFailedError("no output")
+    )
+    mocker.patch.object(rdap, "fetch", return_value=RDAP_RESPONSE)
+
+    test_agent.start()
+    test_agent.process(scan_message)
+
+    assert len(agent_mock) == 1
+    assert agent_mock[0].data["name"] == "medallia.com"
+    assert agent_mock[0].data["registrar"] == "CSC Corporate Domains"
+
+
+def testAgentWhois_whenBothFail_emitsNothing(
+    scan_message: message.Message,
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """Ensure that nothing is emitted when neither source answered."""
+    del agent_persist_mock
+    mocker.patch(
+        "whois.whois", side_effect=whois_exceptions.WhoisCommandFailedError("no output")
+    )
+    mocker.patch.object(rdap, "fetch", return_value=None)
+
+    test_agent.start()
+    test_agent.process(scan_message)
+
+    assert len(agent_mock) == 0

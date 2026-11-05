@@ -272,3 +272,19 @@ def testRdapBootstrap_whenTheMachineJustBooted_stillReadsTheRegistry(
     rdap._bootstrap()
 
     assert urlopen.call_count == 1
+
+
+@pytest.mark.parametrize("answer", [None, ["a"], "text", 3])
+def testRdapFetch_whenTheAnswerIsNotAnObject_returnsNone(
+    answer: Any, mocker: plugin.MockerFixture
+) -> None:
+    """Ensure that a 200 carrying something other than an object is not used."""
+    mocker.patch.object(
+        rdap, "_bootstrap", return_value={"com": "https://rdap.example"}
+    )
+    response = mocker.MagicMock()
+    response.__enter__.return_value = response
+    mocker.patch("urllib.request.urlopen", return_value=response)
+    mocker.patch("json.load", return_value=answer)
+
+    assert rdap.fetch("ebay.com") is None

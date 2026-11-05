@@ -106,7 +106,7 @@ def fetch(domain: str) -> dict[str, typing.Any] | None:
     )
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
-            return typing.cast(dict[str, typing.Any], json.load(response))
+            answer = json.load(response)
     except (
         OSError,
         ValueError,
@@ -114,6 +114,11 @@ def fetch(domain: str) -> dict[str, typing.Any] | None:
     ) as e:
         logger.warning("RDAP lookup failed for %s: %s", domain, e)
         return None
+
+    if not isinstance(answer, dict):
+        logger.warning("The RDAP answer for %s is not an object", domain)
+        return None
+    return answer
 
 
 def _dicts(value: typing.Any) -> list[dict[str, typing.Any]]:

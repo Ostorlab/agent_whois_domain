@@ -3,7 +3,7 @@
 import logging
 import re
 import socket
-from typing import cast
+from typing import Any, cast
 
 import tenacity
 import tld
@@ -16,7 +16,7 @@ from ostorlab.runtimes import definitions as runtime_definitions
 from rich import logging as rich_logging
 from whois import exceptions as whois_exceptions
 
-from agent import result_parser
+from agent import rdap, result_parser
 
 logging.basicConfig(
     format="%(message)s",
@@ -72,13 +72,17 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
             if self._is_domain_in_scope(domain_object.fld) is False:
                 return
 
+            whois_output = None
             try:
-                scan_output = self._fetch_whois(domain_object.fld)
-                if scan_output is None:
-                    return
-                self._emit_result(scan_output)
+                whois_output = self._fetch_whois(domain_object.fld)
             except whois_exceptions.PywhoisError as e:
                 logger.error(e)
+
+            rdap_response = rdap.fetch(domain_object.fld)
+            if whois_output is None and rdap_response is None:
+                return
+
+            self._emit_result(domain_object.fld, whois_output, rdap_response)
         else:
             logger.error("domain is not a valid URL: %s", domain)
 
@@ -122,12 +126,39 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
         logger.info("done scanning %s .", domain_name)
         return whois_output
 
-    def _emit_result(self, scan_output: whois.parser.WhoisCom) -> None:
-        """After the scan is done, emit the scan findings."""
+    def _emit_result(
+        self,
+        domain: str,
+        whois_output: whois.parser.WhoisCom | None,
+        rdap_response: dict[str, Any] | None,
+    ) -> None:
+        """Emit the registration records of a domain.
 
-        logger.info("emitting results for %s", scan_output.get("domain_name"))
-        for m in result_parser.parse_results(scan_output):
-            self.emit(selector=LIB_SELECTOR, data=m)
+        RDAP answers for the records it carries and whois for the rest, so a TLD
+        without RDAP and a lookup that did not answer both keep today's result,
+        and the registrant's organisation and country keep coming from whois.
+
+        Args:
+            domain: The domain that was looked up.
+            whois_output: The whois result, None when the lookup did not answer.
+            rdap_response: The RDAP response, None when there is none to use.
+        """
+        logger.info("emitting results for %s", domain)
+        rdap_fields = {} if rdap_response is None else rdap.parse(rdap_response)
+        outputs = (
+            []
+            if whois_output is None
+            else list(result_parser.parse_results(whois_output))
+        )
+        if len(outputs) == 0:
+            if len(rdap_fields) == 0:
+                return
+            # whois did not answer, so the domain is the only field it would
+            # have carried.
+            outputs = [{"name": domain}]
+
+        for output in outputs:
+            self.emit(selector=LIB_SELECTOR, data={**output, **rdap_fields})
 
 
 if __name__ == "__main__":

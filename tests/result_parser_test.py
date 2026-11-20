@@ -146,3 +146,61 @@ def testParseResults_whenNoCountryField_shouldReturnNoCountry() -> None:
     output = next(result_parser.parse_results({"domain_name": "example.com"}))
 
     assert output["country"] is None
+
+
+def testParseResults_whenMeParserMissesTheNameServers_shouldReadThemFromTheRegistryRecord(
+    proton_me_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that the registry record's name servers are read when the parser misses them."""
+    output = next(result_parser.parse_results(proton_me_whois))
+
+    assert sorted(output["name_servers"]) == [
+        "ns1.proton.me",
+        "ns2.proton.me",
+        "ns3.proton.me",
+    ]
+
+
+def testParseResults_whenMeParserMissesTheDnssec_shouldReadItFromTheRegistryRecord(
+    proton_me_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that the registry record's DNSSEC state is read when the parser misses it."""
+    output = next(result_parser.parse_results(proton_me_whois))
+
+    assert output["dnssec"] == ["signedDelegation"]
+
+
+def testParseResults_whenDnssecLineBelongsToTheRegistrar_shouldReturnNoDnssec(
+    ferrari_it_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that the registrar's indented DNSSEC line is not read as the domain's."""
+    output = next(result_parser.parse_results(ferrari_it_whois))
+
+    assert output["dnssec"] == []
+
+
+def testParseResults_whenComAnswer_shouldKeepTheParsedNameServersAndDnssec(
+    microsoft_com_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that a .com answer keeps the name servers and DNSSEC python-whois parses."""
+    output = next(result_parser.parse_results(microsoft_com_whois))
+
+    assert sorted(output["name_servers"]) == [
+        "ns1-39.azure-dns.com",
+        "ns2-39.azure-dns.net",
+        "ns3-39.azure-dns.org",
+        "ns4-39.azure-dns.info",
+    ]
+    assert output["dnssec"] == ["unsigned"]
+
+
+def testParseResults_whenRegistryNameServersAndDnssecAreEmpty_shouldNotReadTheReferral(
+    proton_me_whois_with_empty_registry_values: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that empty registry name servers and DNSSEC are ignored and the referral is not read."""
+    output = next(
+        result_parser.parse_results(proton_me_whois_with_empty_registry_values)
+    )
+
+    assert output["name_servers"] == []
+    assert output["dnssec"] == []

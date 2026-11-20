@@ -26,6 +26,8 @@ UNDISCLOSED_VALUE = "<data not disclosed>"
 # Ends the registry's record; python-whois appends the registrar's referral answer after it.
 REGISTRY_RECORD_END = re.compile(r">>> Last update of WHOIS database", re.IGNORECASE)
 COUNTRY_LINE = re.compile(r"^Registrant Country:(.*)$", re.IGNORECASE | re.MULTILINE)
+NAME_SERVER_LINE = re.compile(r"^Name Server:(.*)$", re.IGNORECASE | re.MULTILINE)
+DNSSEC_LINE = re.compile(r"^DNSSEC:(.*)$", re.IGNORECASE | re.MULTILINE)
 
 
 def parse_results(results: whois.parser.WhoisCom) -> Iterator[dict[str, Any]]:
@@ -61,10 +63,10 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[dict[str, Any]]:
                 "emails": [email for email in found_emails if _is_valid_email(email)],
                 "status": get_list_from_string(scan_output_dict.get("status", "")),
                 "name_servers": _normalize_name_servers(
-                    get_list_from_string(scan_output_dict.get("name_servers", ""))
+                    _name_servers(scan_output_dict, registry_record)
                 ),
                 "contact_names": get_list_from_string(scan_output_dict.get("name", "")),
-                "dnssec": get_list_from_string(scan_output_dict.get("dnssec", "")),
+                "dnssec": _dnssec(scan_output_dict, registry_record),
                 "org": _registrant_value(scan_output_dict, ORG_FIELDS),
                 "country": _registrant_country(scan_output_dict, registry_record),
             }
@@ -152,6 +154,33 @@ def _registrant_country(
     if len(registry_values) == 0:
         return None
     return registry_values[0]
+
+
+def _name_servers(scan_output: dict[str, Any], registry_record: str) -> list[str]:
+    """Returns the parsed name servers, else the registry record's without a trailing dot."""
+    name_servers = [
+        server
+        for server in get_list_from_string(scan_output.get("name_servers", ""))
+        if server != ""
+    ]
+    if len(name_servers) > 0:
+        return name_servers
+    return [
+        server.rstrip(".")
+        for server in _registry_values(registry_record, NAME_SERVER_LINE)
+    ]
+
+
+def _dnssec(scan_output: dict[str, Any], registry_record: str) -> list[str]:
+    """Returns the parsed DNSSEC state, else the registry record's."""
+    dnssec = [
+        state
+        for state in get_list_from_string(scan_output.get("dnssec", ""))
+        if state != ""
+    ]
+    if len(dnssec) > 0:
+        return dnssec
+    return _registry_values(registry_record, DNSSEC_LINE)
 
 
 def _normalize_name_servers(name_servers: list[str]) -> list[str]:

@@ -4,6 +4,7 @@ import datetime
 from typing import Any
 
 import pytest
+import whois
 from ostorlab.agent.message import message
 from pytest_mock import plugin
 from whois import exceptions as whois_exceptions
@@ -726,3 +727,38 @@ def testAgentWhois_whenBothFail_emitsNothing(
     test_agent.process(scan_message)
 
     assert len(agent_mock) == 0
+
+
+def testAgentWhois_whenMeDomainHasNoRdap_shouldEmitTheRegistryRecord(
+    proton_me_message: message.Message,
+    proton_me_whois: whois.parser.WhoisEntry,
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """Ensure that a .me domain reports its registrant, name servers, DNSSEC and EPP codes."""
+    del agent_persist_mock
+    mocker.patch("whois.whois", return_value=proton_me_whois)
+
+    test_agent.start()
+    test_agent.process(proton_me_message)
+
+    assert len(agent_mock) == 1
+    emitted = agent_mock[0].data
+    assert emitted["org"] == "Proton AG"
+    assert emitted["country"] == "CH"
+    assert sorted(emitted["name_servers"]) == [
+        "ns1.proton.me",
+        "ns2.proton.me",
+        "ns3.proton.me",
+    ]
+    assert emitted["dnssec"] == ["signedDelegation"]
+    assert emitted["status"] == [
+        "clientDeleteProhibited",
+        "serverDeleteProhibited",
+        "clientTransferProhibited",
+        "serverTransferProhibited",
+        "clientUpdateProhibited",
+        "serverUpdateProhibited",
+    ]

@@ -1,0 +1,279 @@
+"""Unit tests for the whois result parser."""
+
+import whois
+
+from agent import result_parser
+
+
+def testParseResults_whenMeParserUsesRegistrantOrg_shouldReturnTheOrg(
+    proton_me_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that the .me registrant_org is returned as org."""
+    output = next(result_parser.parse_results(proton_me_whois))
+
+    assert output["org"] == "Proton AG"
+
+
+def testParseResults_whenAiParserUsesRegistrantOrg_shouldReturnTheOrg(
+    scale_ai_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that the .ai registrant_org is returned as org."""
+    output = next(result_parser.parse_results(scale_ai_whois))
+
+    assert output["org"] == "Scale AI"
+
+
+def testParseResults_whenItParserUsesRegistrantOrganization_shouldReturnTheOrg(
+    ferrari_it_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that registrant_organization is returned as org."""
+    output = next(result_parser.parse_results(ferrari_it_whois))
+
+    assert output["org"] == "Ferrari S.p.A."
+
+
+def testParseResults_whenComAnswer_shouldKeepTheParsedOrg(
+    microsoft_com_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that a .com answer keeps the org python-whois parses."""
+    output = next(result_parser.parse_results(microsoft_com_whois))
+
+    assert output["org"] == "Microsoft Corporation"
+
+
+def testParseResults_whenOrgIsRedacted_shouldReturnTheRedactionNotice(
+    cloudflare_com_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that a redaction notice is returned as the organisation."""
+    output = next(result_parser.parse_results(cloudflare_com_whois))
+
+    assert output["org"] == "DATA REDACTED"
+
+
+def testParseResults_whenOrgAndRegistrantOrgAreSet_shouldPreferOrg() -> None:
+    """Ensure that org wins over registrant_org."""
+    scan_output = {
+        "domain_name": "example.com",
+        "org": "Example Org",
+        "registrant_org": "Other Org",
+    }
+
+    output = next(result_parser.parse_results(scan_output))
+
+    assert output["org"] == "Example Org"
+
+
+def testParseResults_whenNoOrgField_shouldReturnNoOrg() -> None:
+    """Ensure that a missing organisation is returned as None."""
+    output = next(result_parser.parse_results({"domain_name": "example.com"}))
+
+    assert output["org"] is None
+
+
+def testParseResults_whenMeParserMissesTheCountry_shouldReadItFromTheRegistryRecord(
+    proton_me_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that the .me country is read from the registry record."""
+    output = next(result_parser.parse_results(proton_me_whois))
+
+    assert output["country"] == "CH"
+
+
+def testParseResults_whenAiParserUsesRegistrantCountry_shouldReturnTheCountry(
+    scale_ai_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that registrant_country is returned as country."""
+    output = next(result_parser.parse_results(scale_ai_whois))
+
+    assert output["country"] == "US"
+
+
+def testParseResults_whenIoAnswer_shouldReturnTheCountry(
+    docker_io_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that the .io registrant country is returned."""
+    output = next(result_parser.parse_results(docker_io_whois))
+
+    assert output["country"] == "US"
+
+
+def testParseResults_whenCaParserHasNoCountryKey_shouldReadItFromTheRegistryRecord(
+    shopify_ca_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that the .ca country is read from the registry record."""
+    output = next(result_parser.parse_results(shopify_ca_whois))
+
+    assert output["country"] == "CA"
+
+
+def testParseResults_whenComAnswer_shouldKeepTheParsedCountry(
+    microsoft_com_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that a .com answer keeps the country python-whois parses."""
+    output = next(result_parser.parse_results(microsoft_com_whois))
+
+    assert output["country"] == "US"
+
+
+def testParseResults_whenRegistryCountryIsEmpty_shouldNotReadTheReferral(
+    proton_me_whois_with_empty_registry_values: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that an empty registry country is ignored and the referral is not read."""
+    output = next(
+        result_parser.parse_results(proton_me_whois_with_empty_registry_values)
+    )
+
+    assert output["country"] is None
+
+
+def testParseResults_whenCountryAndRegistrantCountryAreSet_shouldPreferCountry() -> (
+    None
+):
+    """Ensure that country wins over registrant_country."""
+    scan_output = {
+        "domain_name": "example.com",
+        "country": "FR",
+        "registrant_country": "DE",
+    }
+
+    output = next(result_parser.parse_results(scan_output))
+
+    assert output["country"] == "FR"
+
+
+def testParseResults_whenNoCountryField_shouldReturnNoCountry() -> None:
+    """Ensure that a missing country is returned as None."""
+    output = next(result_parser.parse_results({"domain_name": "example.com"}))
+
+    assert output["country"] is None
+
+
+def testParseResults_whenMeParserMissesTheNameServers_shouldReadThemFromTheRegistryRecord(
+    proton_me_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that the registry record's name servers are read when the parser misses them."""
+    output = next(result_parser.parse_results(proton_me_whois))
+
+    assert sorted(output["name_servers"]) == [
+        "ns1.proton.me",
+        "ns2.proton.me",
+        "ns3.proton.me",
+    ]
+
+
+def testParseResults_whenMeParserMissesTheDnssec_shouldReadItFromTheRegistryRecord(
+    proton_me_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that the registry record's DNSSEC state is read when the parser misses it."""
+    output = next(result_parser.parse_results(proton_me_whois))
+
+    assert output["dnssec"] == ["signedDelegation"]
+
+
+def testParseResults_whenDnssecLineBelongsToTheRegistrar_shouldReturnNoDnssec(
+    ferrari_it_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that the registrar's indented DNSSEC line is not read as the domain's."""
+    output = next(result_parser.parse_results(ferrari_it_whois))
+
+    assert output["dnssec"] == []
+
+
+def testParseResults_whenComAnswer_shouldKeepTheParsedNameServersAndDnssec(
+    microsoft_com_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that a .com answer keeps the name servers and DNSSEC python-whois parses."""
+    output = next(result_parser.parse_results(microsoft_com_whois))
+
+    assert sorted(output["name_servers"]) == [
+        "ns1-39.azure-dns.com",
+        "ns2-39.azure-dns.net",
+        "ns3-39.azure-dns.org",
+        "ns4-39.azure-dns.info",
+    ]
+    assert output["dnssec"] == ["unsigned"]
+
+
+def testParseResults_whenRegistryNameServersAndDnssecAreEmpty_shouldNotReadTheReferral(
+    proton_me_whois_with_empty_registry_values: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that empty registry name servers and DNSSEC are ignored and the referral is not read."""
+    output = next(
+        result_parser.parse_results(proton_me_whois_with_empty_registry_values)
+    )
+
+    assert output["name_servers"] == []
+    assert output["dnssec"] == []
+
+
+def testParseResults_whenIoParserMissesTheOrg_shouldReadItFromTheRegistryRecord(
+    docker_io_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that the .io organisation is read from the registry record."""
+    output = next(result_parser.parse_results(docker_io_whois))
+
+    assert output["org"] == "Docker Inc."
+
+
+def testParseResults_whenCaParserHasNoOrgKey_shouldReadItFromTheRegistryRecord(
+    shopify_ca_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that the .ca organisation is read from the registry record."""
+    output = next(result_parser.parse_results(shopify_ca_whois))
+
+    assert output["org"] == "Shopify Inc."
+
+
+def testParseResults_whenRegistryOrgIsEmpty_shouldNotReadTheReferral(
+    proton_me_whois_with_empty_registry_values: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that an empty registry organisation is ignored and the referral is not read."""
+    output = next(
+        result_parser.parse_results(proton_me_whois_with_empty_registry_values)
+    )
+
+    assert output["org"] is None
+
+
+def testParseResults_whenStatusIsRepeatedWithAndWithoutLink_shouldReturnEachCodeOnce(
+    proton_me_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that the registry and registrar statuses collapse to one code each."""
+    output = next(result_parser.parse_results(proton_me_whois))
+
+    assert output["status"] == [
+        "clientDeleteProhibited",
+        "serverDeleteProhibited",
+        "clientTransferProhibited",
+        "serverTransferProhibited",
+        "clientUpdateProhibited",
+        "serverUpdateProhibited",
+    ]
+
+
+def testParseResults_whenStatusLinkIsInParentheses_shouldDropIt() -> None:
+    """Ensure that a bracketed link is dropped and a plain status is kept whole."""
+    scan_output = {
+        "domain_name": "example.com",
+        "status": [
+            "clientTransferProhibited (https://www.icann.org/epp#clientTransferProhibited)",
+            "Registered until expiry date.",
+        ],
+    }
+
+    output = next(result_parser.parse_results(scan_output))
+
+    assert output["status"] == [
+        "clientTransferProhibited",
+        "Registered until expiry date.",
+    ]
+
+
+def testParseResults_whenFieldsAreMissing_shouldReturnEmptyLists() -> None:
+    """Ensure that missing list fields are empty lists, not lists of an empty string."""
+    output = next(result_parser.parse_results({"domain_name": "example.com"}))
+
+    assert output["contact_names"] == []
+    assert output["dnssec"] == []
+    assert output["status"] == []
+    assert output["name_servers"] == []

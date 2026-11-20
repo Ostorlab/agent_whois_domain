@@ -729,7 +729,7 @@ def testAgentWhois_whenBothFail_emitsNothing(
     assert len(agent_mock) == 0
 
 
-def testAgentWhois_whenMeDomainHasNoRdap_shouldEmitTheRegistrantOrg(
+def testAgentWhois_whenMeDomainHasNoRdap_shouldEmitTheRegistrantOrgAndCountry(
     proton_me_message: message.Message,
     proton_me_whois: whois.parser.WhoisEntry,
     test_agent: whois_domain_agent.AgentWhoisDomain,
@@ -737,7 +737,7 @@ def testAgentWhois_whenMeDomainHasNoRdap_shouldEmitTheRegistrantOrg(
     mocker: plugin.MockerFixture,
     agent_mock: list[message.Message],
 ) -> None:
-    """Ensure that a .me domain reports its registrant organisation."""
+    """Ensure that a .me domain reports its registrant organisation and country."""
     del agent_persist_mock
     mocker.patch("whois.whois", return_value=proton_me_whois)
 
@@ -747,3 +747,4 @@ def testAgentWhois_whenMeDomainHasNoRdap_shouldEmitTheRegistrantOrg(
     assert len(agent_mock) == 1
     emitted = agent_mock[0].data
     assert emitted["org"] == "Proton AG"
+    assert emitted["country"] == "CH"

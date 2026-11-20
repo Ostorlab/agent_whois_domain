@@ -1,6 +1,7 @@
 """Module to parse whois_domain scan results."""
 
 import datetime
+import re
 from collections.abc import Iterator
 from typing import Any
 
@@ -15,12 +16,16 @@ OPTIONAL_FIELDS = [
     "city",
     "state",
     "zipcode",
-    "country",
 ]
 # The keys TLD parsers store the registrant's organisation under, preferred first.
 ORG_FIELDS = ["org", "registrant_org", "registrant_organization"]
+COUNTRY_FIELDS = ["country", "registrant_country"]
 
 UNDISCLOSED_VALUE = "<data not disclosed>"
+
+# Ends the registry's record; python-whois appends the registrar's referral answer after it.
+REGISTRY_RECORD_END = re.compile(r">>> Last update of WHOIS database", re.IGNORECASE)
+COUNTRY_LINE = re.compile(r"^Registrant Country:(.*)$", re.IGNORECASE | re.MULTILINE)
 
 
 def parse_results(results: whois.parser.WhoisCom) -> Iterator[dict[str, Any]]:
@@ -33,6 +38,7 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[dict[str, Any]]:
        The parsed output of the whois_domain scan results.
     """
     scan_output_dict = dict(results)
+    registry_record = _registry_record(results)
     names = set()
     for name in get_list_from_string(scan_output_dict.pop("domain_name", "")):
         if name is not None:
@@ -60,6 +66,7 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[dict[str, Any]]:
                 "contact_names": get_list_from_string(scan_output_dict.get("name", "")),
                 "dnssec": get_list_from_string(scan_output_dict.get("dnssec", "")),
                 "org": _registrant_value(scan_output_dict, ORG_FIELDS),
+                "country": _registrant_country(scan_output_dict, registry_record),
             }
 
             for field in OPTIONAL_FIELDS:
@@ -111,6 +118,20 @@ def get_list_from_string(scan_output_value: str | list[str]) -> list[str]:
         return scan_output_value or []
 
 
+def _registry_record(results: whois.parser.WhoisCom) -> str:
+    """Returns the registry's record from the raw answer, without the registrar's referral."""
+    if not isinstance(results, whois.parser.WhoisEntry):
+        return ""
+    raw_text: str = results.text
+    return REGISTRY_RECORD_END.split(raw_text, maxsplit=1)[0]
+
+
+def _registry_values(registry_record: str, line: re.Pattern[str]) -> list[str]:
+    """Returns the non-empty values of a line in the registry's record."""
+    values = [value.strip() for value in line.findall(registry_record)]
+    return [value for value in values if value != ""]
+
+
 def _registrant_value(scan_output: dict[str, Any], fields: list[str]) -> str | None:
     """Returns the first parsed field holding a value."""
     for field in fields:
@@ -118,6 +139,19 @@ def _registrant_value(scan_output: dict[str, Any], fields: list[str]) -> str | N
         if value is not None and len(value) > 0:
             return _format_str(value)
     return None
+
+
+def _registrant_country(
+    scan_output: dict[str, Any], registry_record: str
+) -> str | None:
+    """Returns the parsed registrant country, else the registry record's."""
+    country = _registrant_value(scan_output, COUNTRY_FIELDS)
+    if country is not None:
+        return country
+    registry_values = _registry_values(registry_record, COUNTRY_LINE)
+    if len(registry_values) == 0:
+        return None
+    return registry_values[0]
 
 
 def _normalize_name_servers(name_servers: list[str]) -> list[str]:

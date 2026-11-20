@@ -1,0 +1,162 @@
+Domain Name: shopify.ca
+Registry Domain ID: D370207-CIRA
+Registrar WHOIS Server: whois.ca.fury.ca
+Registrar URL: Markmonitor.com
+Updated Date: 2026-01-19T09:38:28Z
+Creation Date: 2006-02-20T21:35:17Z
+Registry Expiry Date: 2028-02-20T05:00:00Z
+Registrar: MarkMonitor International Canada Ltd.
+Registrar IANA ID: not applicable
+Registrar Abuse Contact Email: abusecomplaints@markmonitor.com
+Registrar Abuse Contact Phone: +1.2083895740
+Registrar Abuse Contact Phone Ext:
+Domain Status: clientDeleteProhibited https://icann.org/epp#clientDeleteProhibited
+Domain Status: clientTransferProhibited https://icann.org/epp#clientTransferProhibited
+Domain Status: clientUpdateProhibited https://icann.org/epp#clientUpdateProhibited
+Registry Registrant ID: 75873925-CIRA
+Registrant Name: Shopify Inc.
+Registrant Organization: Shopify Inc.
+Registrant Street: 151 O'Connor Street, Ground Floor
+Registrant City: Ottawa
+Registrant State/Province: ON
+Registrant Postal Code: K1A2L8
+Registrant Country: CA
+Registrant Phone: +1.6132412828
+Registrant Phone Ext:
+Registrant Fax:
+Registrant Fax Ext:
+Registrant Email: domains@shopify.com
+Registry Admin ID: 75874262-CIRA
+Admin Name: Example Contact
+Admin Organization: Shopify Inc.
+Admin Street: 151 O'Connor Street, Ground Floor
+Admin City: Ottawa
+Admin State/Province: ON
+Admin Postal Code: K1A2L8
+Admin Country: CA
+Admin Phone: +1.6132412828
+Admin Phone Ext:
+Admin Fax:
+Admin Fax Ext:
+Admin Email: domains@shopify.com
+Registry Tech ID: 75874262-CIRA
+Tech Name: Example Contact
+Tech Organization: Shopify Inc.
+Tech Street: 151 O'Connor Street, Ground Floor
+Tech City: Ottawa
+Tech State/Province: ON
+Tech Postal Code: K1A2L8
+Tech Country: CA
+Tech Phone: +1.6132412828
+Tech Phone Ext:
+Tech Fax:
+Tech Fax Ext:
+Tech Email: domains@shopify.com
+Registry Billing ID: 73886904-CIRA
+Billing Name: CCOPS Billing
+Billing Organization: MarkMonitor Inc.
+Billing Street: 3540 East Longwing Lane, Suite 300
+Billing City: Meridian
+Billing State/Province: ID
+Billing Postal Code: 83646
+Billing Country: US
+Billing Phone: +1.2083895740
+Billing Phone Ext:
+Billing Fax: +1.2083895771
+Billing Fax Ext:
+Billing Email: ccopsbilling@markmonitor.com
+Name Server: blue.foundationdns.com
+Name Server: blue.foundationdns.net
+Name Server: blue.foundationdns.org
+DNSSEC: unsigned
+URL of the ICANN Whois Inaccuracy Complaint Form: https://www.icann.org/wicf/
+>>> Last update of WHOIS database: 2026-11-20T08:41:32Z <<<
+
+For more information on Whois status codes, please visit https://icann.org/epp
+
+%
+% Use of CIRA's WHOIS service is governed by the Terms of Use in its Legal
+% Notice, available at https://www.cira.ca/en/resources/documents/about/website-terms-use
+%
+% (c) 2026 Canadian Internet Registration Authority, (http://www.cira.ca/)
+Domain Name: shopify.ca
+Registry Domain ID: D370207-CIRA
+Registrar WHOIS Server: whois.ca.fury.ca
+Registrar URL: Markmonitor.com
+Updated Date: 2026-01-19T09:38:28Z
+Creation Date: 2006-02-20T21:35:17Z
+Registry Expiry Date: 2028-02-20T05:00:00Z
+Registrar: MarkMonitor International Canada Ltd.
+Registrar IANA ID: not applicable
+Registrar Abuse Contact Email: abusecomplaints@markmonitor.com
+Registrar Abuse Contact Phone: +1.2083895740
+Registrar Abuse Contact Phone Ext:
+Domain Status: clientDeleteProhibited https://icann.org/epp#clientDeleteProhibited
+Domain Status: clientTransferProhibited https://icann.org/epp#clientTransferProhibited
+Domain Status: clientUpdateProhibited https://icann.org/epp#clientUpdateProhibited
+Registry Registrant ID: 75873925-CIRA
+Registrant Name: Shopify Inc.
+Registrant Organization: Shopify Inc.
+Registrant Street: 151 O'Connor Street, Ground Floor
+Registrant City: Ottawa
+Registrant State/Province: ON
+Registrant Postal Code: K1A2L8
+Registrant Country: CA
+Registrant Phone: +1.6132412828
+Registrant Phone Ext:
+Registrant Fax:
+Registrant Fax Ext:
+Registrant Email: domains@shopify.com
+Registry Admin ID: 75874262-CIRA
+Admin Name: Example Contact
+Admin Organization: Shopify Inc.
+Admin Street: 151 O'Connor Street, Ground Floor
+Admin City: Ottawa
+Admin State/Province: ON
+Admin Postal Code: K1A2L8
+Admin Country: CA
+Admin Phone: +1.6132412828
+Admin Phone Ext:
+Admin Fax:
+Admin Fax Ext:
+Admin Email: domains@shopify.com
+Registry Tech ID: 75874262-CIRA
+Tech Name: Example Contact
+Tech Organization: Shopify Inc.
+Tech Street: 151 O'Connor Street, Ground Floor
+Tech City: Ottawa
+Tech State/Province: ON
+Tech Postal Code: K1A2L8
+Tech Country: CA
+Tech Phone: +1.6132412828
+Tech Phone Ext:
+Tech Fax:
+Tech Fax Ext:
+Tech Email: domains@shopify.com
+Registry Billing ID: 73886904-CIRA
+Billing Name: CCOPS Billing
+Billing Organization: MarkMonitor Inc.
+Billing Street: 3540 East Longwing Lane, Suite 300
+Billing City: Meridian
+Billing State/Province: ID
+Billing Postal Code: 83646
+Billing Country: US
+Billing Phone: +1.2083895740
+Billing Phone Ext:
+Billing Fax: +1.2083895771
+Billing Fax Ext:
+Billing Email: ccopsbilling@markmonitor.com
+Name Server: blue.foundationdns.com
+Name Server: blue.foundationdns.net
+Name Server: blue.foundationdns.org
+DNSSEC: unsigned
+URL of the ICANN Whois Inaccuracy Complaint Form: https://www.icann.org/wicf/
+>>> Last update of WHOIS database: 2026-11-20T08:41:32Z <<<
+
+For more information on Whois status codes, please visit https://icann.org/epp
+
+%
+% Use of CIRA's WHOIS service is governed by the Terms of Use in its Legal
+% Notice, available at https://www.cira.ca/en/resources/documents/about/website-terms-use
+%
+% (c) 2026 Canadian Internet Registration Authority, (http://www.cira.ca/)

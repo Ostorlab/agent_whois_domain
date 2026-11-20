@@ -2,6 +2,7 @@
 
 import json
 import pathlib
+import re
 
 import pytest
 import whois
@@ -13,6 +14,11 @@ from ostorlab.utils import definitions
 from agent import whois_domain_agent
 
 WHOIS_ANSWERS = pathlib.Path(__file__).parent / "files"
+# The proton.me registry record's lines that the empty-values fixture blanks.
+REGISTRY_LINES_TO_EMPTY = re.compile(
+    r"^(Registrant Organization|Registrant Country|Name Server|DNSSEC):.*$",
+    re.MULTILINE,
+)
 
 
 def _read_whois_answer(domain: str) -> str:
@@ -32,15 +38,38 @@ def proton_me_whois() -> whois.parser.WhoisEntry:
 
 
 @pytest.fixture
+def proton_me_whois_with_empty_registry_values() -> whois.parser.WhoisEntry:
+    """The proton.me answer whose registry record leaves org, country, name server and DNSSEC empty."""
+    raw_text = _read_whois_answer("proton.me")
+    registry_record, record_end, referral = raw_text.partition(">>> Last update")
+    registry_record = REGISTRY_LINES_TO_EMPTY.sub(r"\1: ", registry_record)
+    return whois.parser.WhoisEntry.load(
+        "proton.me", registry_record + record_end + referral
+    )
+
+
+@pytest.fixture
 def scale_ai_whois() -> whois.parser.WhoisEntry:
     """The .ai answer for scale.ai, parsed into registrant_org and registrant_country."""
     return _load_whois_answer("scale.ai")
 
 
 @pytest.fixture
+def docker_io_whois() -> whois.parser.WhoisEntry:
+    """The .io answer for docker.io, whose parser keeps the organisation under registrant_name."""
+    return _load_whois_answer("docker.io")
+
+
+@pytest.fixture
 def ferrari_it_whois() -> whois.parser.WhoisEntry:
     """The .it answer for ferrari.it, parsed into registrant_organization."""
     return _load_whois_answer("ferrari.it")
+
+
+@pytest.fixture
+def shopify_ca_whois() -> whois.parser.WhoisEntry:
+    """The .ca answer for shopify.ca, whose parser has no organisation or country key."""
+    return _load_whois_answer("shopify.ca")
 
 
 @pytest.fixture

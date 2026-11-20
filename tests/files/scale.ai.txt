@@ -1,0 +1,65 @@
+Domain Name: scale.ai
+Registry Domain ID: cf8e386df4b44233a8f7b8eb06a84438-DONUTS
+Registrar WHOIS Server: whois.porkbun.com
+Registrar URL: http://porkbun.com
+Updated Date: 2026-08-12T09:30:31Z
+Creation Date: 2018-02-16T16:03:12Z
+Registry Expiry Date: 2030-02-16T16:03:12Z
+Registrar: Porkbun LLC
+Registrar IANA ID: 1861
+Registrar Abuse Contact Email: abuse+registry@porkbun.com
+Registrar Abuse Contact Phone: +1.8557675286
+Domain Status: clientDeleteProhibited https://icann.org/epp#clientDeleteProhibited
+Domain Status: clientTransferProhibited https://icann.org/epp#clientTransferProhibited
+Registry Registrant ID: 993664a3830b45b6b305a8f41b4c9d46-DONUTS
+Registrant Name: Domain Admins
+Registrant Organization: Scale AI
+Registrant Street: 155 5th St Floor 6
+Registrant City: San Francisco
+Registrant State/Province: California
+Registrant Postal Code: 94103
+Registrant Country: US
+Registrant Phone: +1.6508227044
+Registrant Phone Ext: 
+Registrant Fax: 
+Registrant Fax Ext: 
+Registrant Email: domain-admins@scale.com
+Registry Admin ID: 5331eccf1cb940af813998fe39e88189-DONUTS
+Admin Name: Domain Admins
+Admin Organization: Scale AI
+Admin Street: 155 5th St Floor 6
+Admin City: San Francisco
+Admin State/Province: California
+Admin Postal Code: 94103
+Admin Country: US
+Admin Phone: +1.6508227044
+Admin Phone Ext: 
+Admin Fax: 
+Admin Fax Ext: 
+Admin Email: domain-admins@scale.com
+Registry Tech ID: e99a90ca1e194642bb47f23e13b23517-DONUTS
+Tech Name: Domain Admins
+Tech Organization: Scale AI
+Tech Street: 155 5th St Floor 6
+Tech City: San Francisco
+Tech State/Province: California
+Tech Postal Code: 94103
+Tech Country: US
+Tech Phone: +1.6508227044
+Tech Phone Ext: 
+Tech Fax: 
+Tech Fax Ext: 
+Tech Email: domain-admins@scale.com
+Name Server: pam.ns.cloudflare.com
+Name Server: hugh.ns.cloudflare.com
+DNSSEC: unsigned
+Registrant Additional Email: 
+Admin Additional Email: 
+Tech Additional Email: 
+URL of the ICANN Whois Inaccuracy Complaint Form: https://icann.org/wicf/
+>>> Last update of WHOIS database: 2026-11-20T08:45:56Z <<<
+
+For more information on Whois status codes, please visit https://icann.org/epp
+
+Terms of Use: Access to WHOIS information is provided to assist persons in determining the contents of a domain name registration record in the registry database. The data in this record is provided by Identity Digital or the Registry Operator for informational purposes only, and accuracy is not guaranteed. This service is intended only for query-based access. You agree that you will use this data only for lawful purposes and that, under no circumstances will you use this data to (a) allow, enable, or otherwise support the transmission by e-mail, telephone, or facsimile of mass unsolicited, commercial advertising or solicitations to entities other than the data recipient's own existing customers; or (b) enable high volume, automated, electronic processes that send queries or data to the systems of Registry Operator, a Registrar, or Identity Digital except as reasonably necessary to register domain names or modify existing registrations. When using the Whois service, please consider the following: The Whois service is not a replacement for standard EPP commands to the SRS service. Whois is not considered authoritative for registered domain objects. The Whois service may be scheduled for downtime during production or OT&E maintenance periods. Queries to the Whois services are throttled. If too many queries are received from a single IP address within a specified time, the service will begin to reject further queries for a period of time to prevent disruption of Whois service access. Abuse of the Whois system through data mining is mitigated by detecting and limiting bulk query access from single sources. Where applicable, the presence of a [Non-Public Data] tag indicates that such data is not made publicly available due to applicable data privacy laws or requirements. Should you wish to contact the registrant, please refer to the Whois records available through the registrar URL listed above. Access to non-public data may be provided, upon request, where it can be reasonably confirmed that the requester holds a specific legitimate interest and a proper legal basis for accessing the withheld data. Access to this data provided by Identity Digital can be requested by submitting a request via the form found at https://www.identity.digital/about/policies/whois-layered-access/. The Registrar of Record identified in this output may have an RDDS service that can be queried for additional information on how to contact the Registrant, Admin, or Tech contact of the queried domain name. Identity Digital Inc. and Registry Operator reserve the right to modify these terms at any time. By submitting this query, you agree to abide by this policy.
+Socket not responding: timed out

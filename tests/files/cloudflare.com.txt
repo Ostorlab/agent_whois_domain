@@ -1,0 +1,152 @@
+   Domain Name: CLOUDFLARE.COM
+   Registry Domain ID: 1542998887_DOMAIN_COM-VRSN
+   Registrar WHOIS Server: whois.cloudflare.com
+   Registrar URL: http://www.cloudflare.com
+   Updated Date: 2024-01-09T16:45:28Z
+   Creation Date: 2009-02-17T22:07:54Z
+   Registry Expiry Date: 2033-02-17T22:07:54Z
+   Registrar: Cloudflare, Inc.
+   Registrar IANA ID: 1910
+   Registrar Abuse Contact Email: registrar-abuse@cloudflare.com
+   Registrar Abuse Contact Phone: +1.6503198930
+   Domain Status: clientDeleteProhibited https://icann.org/epp#clientDeleteProhibited
+   Domain Status: clientTransferProhibited https://icann.org/epp#clientTransferProhibited
+   Domain Status: clientUpdateProhibited https://icann.org/epp#clientUpdateProhibited
+   Domain Status: serverDeleteProhibited https://icann.org/epp#serverDeleteProhibited
+   Domain Status: serverTransferProhibited https://icann.org/epp#serverTransferProhibited
+   Domain Status: serverUpdateProhibited https://icann.org/epp#serverUpdateProhibited
+   Name Server: NS3.CLOUDFLARE.COM
+   Name Server: NS4.CLOUDFLARE.COM
+   Name Server: NS5.CLOUDFLARE.COM
+   Name Server: NS6.CLOUDFLARE.COM
+   Name Server: NS7.CLOUDFLARE.COM
+   DNSSEC: signedDelegation
+   DNSSEC DS Data: 2371 13 2 32996839A6D808AFE3EB4A795A0E6A7A39A76FC52FF228B22B76F6D63826F2B9
+   URL of the ICANN Whois Inaccuracy Complaint Form: https://www.icann.org/wicf/
+>>> Last update of whois database: 2026-11-20T08:44:42Z <<<
+
+For more information on Whois status codes, please visit https://icann.org/epp
+
+NOTICE: The expiration date displayed in this record is the date the
+registrar's sponsorship of the domain name registration in the registry is
+currently set to expire. This date does not necessarily reflect the expiration
+date of the domain name registrant's agreement with the sponsoring
+registrar.  Users may consult the sponsoring registrar's Whois database to
+view the registrar's reported date of expiration for this registration.
+
+TERMS OF USE: You are not authorized to access or query our Whois
+database through the use of electronic processes that are high-volume and
+automated except as reasonably necessary to register domain names or
+modify existing registrations; the Data in VeriSign Global Registry
+Services' ("VeriSign") Whois database is provided by VeriSign for
+information purposes only, and to assist persons in obtaining information
+about or related to a domain name registration record. VeriSign does not
+guarantee its accuracy. By submitting a Whois query, you agree to abide
+by the following terms of use: You agree that you may use this Data only
+for lawful purposes and that under no circumstances will you use this Data
+to: (1) allow, enable, or otherwise support the transmission of mass
+unsolicited, commercial advertising or solicitations via e-mail, telephone,
+or facsimile; or (2) enable high volume, automated, electronic processes
+that apply to VeriSign (or its computer systems). The compilation,
+repackaging, dissemination or other use of this Data is expressly
+prohibited without the prior written consent of VeriSign. You agree not to
+use electronic processes that are automated and high-volume to access or
+query the Whois database except as reasonably necessary to register
+domain names or modify existing registrations. VeriSign reserves the right
+to restrict your access to the Whois database in its sole discretion to ensure
+operational stability.  VeriSign may restrict or terminate your access to the
+Whois database for failure to abide by these terms of use. VeriSign
+reserves the right to modify these terms at any time.
+
+The Registry database contains ONLY .COM, .NET, .EDU domains and
+Registrars.
+Domain Name: CLOUDFLARE.COM
+Registry Domain ID: 1542998887_DOMAIN_COM-VRSN
+Registrar WHOIS Server: whois.cloudflare.com
+Registrar URL: https://www.cloudflare.com
+Updated Date: 2024-01-15T01:58:26Z
+Creation Date: 2009-02-17T22:07:54Z
+Registrar Registration Expiration Date: 2033-02-17T22:07:54Z
+Registrar: Cloudflare, Inc.
+Registrar IANA ID: 1910
+Domain Status: clientdeleteprohibited https://icann.org/epp#clientdeleteprohibited
+Domain Status: clienttransferprohibited https://icann.org/epp#clienttransferprohibited
+Domain Status: serverdeleteprohibited https://icann.org/epp#serverdeleteprohibited
+Domain Status: servertransferprohibited https://icann.org/epp#servertransferprohibited
+Domain Status: serverupdateprohibited https://icann.org/epp#serverupdateprohibited
+Domain Status: clientupdateprohibited https://icann.org/epp#clientupdateprohibited
+Registry Registrant ID:
+Registrant Name: DATA REDACTED
+Registrant Organization: DATA REDACTED
+Registrant Street: DATA REDACTED
+Registrant City: DATA REDACTED
+Registrant State/Province: CA
+Registrant Postal Code: DATA REDACTED
+Registrant Country: US
+Registrant Phone: DATA REDACTED
+Registrant Phone Ext: DATA REDACTED
+Registrant Fax: DATA REDACTED
+Registrant Fax Ext: DATA REDACTED
+Registrant Email: https://domaincontact.registrar.cloudflare.com/cloudflare.com
+Registry Admin ID:
+Admin Name: DATA REDACTED
+Admin Organization: DATA REDACTED
+Admin Street: DATA REDACTED
+Admin City: DATA REDACTED
+Admin State/Province: DATA REDACTED
+Admin Postal Code: DATA REDACTED
+Admin Country: DATA REDACTED
+Admin Phone: DATA REDACTED
+Admin Phone Ext: DATA REDACTED
+Admin Fax: DATA REDACTED
+Admin Fax Ext: DATA REDACTED
+Admin Email: https://domaincontact.registrar.cloudflare.com/cloudflare.com
+Registry Tech ID:
+Tech Name: DATA REDACTED
+Tech Organization: DATA REDACTED
+Tech Street: DATA REDACTED
+Tech City: DATA REDACTED
+Tech State/Province: DATA REDACTED
+Tech Postal Code: DATA REDACTED
+Tech Country: DATA REDACTED
+Tech Phone: DATA REDACTED
+Tech Phone Ext: DATA REDACTED
+Tech Fax: DATA REDACTED
+Tech Fax Ext: DATA REDACTED
+Tech Email: https://domaincontact.registrar.cloudflare.com/cloudflare.com
+Registry Billing ID:
+Billing Name: DATA REDACTED
+Billing Organization: DATA REDACTED
+Billing Street: DATA REDACTED
+Billing City: DATA REDACTED
+Billing State/Province: DATA REDACTED
+Billing Postal Code: DATA REDACTED
+Billing Country: DATA REDACTED
+Billing Phone: DATA REDACTED
+Billing Phone Ext: DATA REDACTED
+Billing Fax: DATA REDACTED
+Billing Fax Ext: DATA REDACTED
+Billing Email: https://domaincontact.registrar.cloudflare.com/cloudflare.com
+Name Server: ns3.cloudflare.com
+Name Server: ns4.cloudflare.com
+Name Server: ns5.cloudflare.com
+Name Server: ns6.cloudflare.com
+Name Server: ns7.cloudflare.com
+DNSSEC: signedDelegation
+Registrar Abuse Contact Email: registrar-abuse@cloudflare.com
+Registrar Abuse Contact Phone: +1.4153197517
+URL of the ICANN WHOIS Data Problem Reporting System: http://wdprs.internic.net/
+>>> Last update of WHOIS database: 2026-11-20T08:44:58Z <<<
+
+For more information on Whois status codes, please visit https://icann.org/epp
+
+Cloudflare provides more than 13 million domains with the tools to give their global users a faster, more secure, and more reliable internet experience.
+
+NOTICE:
+
+Data in the Cloudflare Registrar WHOIS database is provided to you by Cloudflare
+under the terms and conditions at https://www.cloudflare.com/domain-registration-agreement/
+
+By submitting this query, you agree to abide by these terms.
+
+Register your domain name at https://www.cloudflare.com/registrar/

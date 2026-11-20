@@ -11,13 +11,14 @@ OPTIONAL_FIELDS = [
     "registrar",
     "whois_server",
     "referral_url",
-    "org",
     "address",
     "city",
     "state",
     "zipcode",
     "country",
 ]
+# The keys TLD parsers store the registrant's organisation under, preferred first.
+ORG_FIELDS = ["org", "registrant_org", "registrant_organization"]
 
 UNDISCLOSED_VALUE = "<data not disclosed>"
 
@@ -58,6 +59,7 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[dict[str, Any]]:
                 ),
                 "contact_names": get_list_from_string(scan_output_dict.get("name", "")),
                 "dnssec": get_list_from_string(scan_output_dict.get("dnssec", "")),
+                "org": _registrant_value(scan_output_dict, ORG_FIELDS),
             }
 
             for field in OPTIONAL_FIELDS:
@@ -107,6 +109,15 @@ def get_list_from_string(scan_output_value: str | list[str]) -> list[str]:
         return [scan_output_value]
     else:
         return scan_output_value or []
+
+
+def _registrant_value(scan_output: dict[str, Any], fields: list[str]) -> str | None:
+    """Returns the first parsed field holding a value."""
+    for field in fields:
+        value = scan_output.get(field)
+        if value is not None and len(value) > 0:
+            return _format_str(value)
+    return None
 
 
 def _normalize_name_servers(name_servers: list[str]) -> list[str]:

@@ -17,7 +17,7 @@ OPTIONAL_FIELDS = [
     "state",
     "zipcode",
 ]
-# The keys TLD parsers store the registrant's organisation under, preferred first.
+# The keys TLD parsers store the registrant's organisation and country under, preferred first.
 ORG_FIELDS = ["org", "registrant_org", "registrant_organization"]
 COUNTRY_FIELDS = ["country", "registrant_country"]
 
@@ -25,6 +25,7 @@ UNDISCLOSED_VALUE = "<data not disclosed>"
 
 # Ends the registry's record; python-whois appends the registrar's referral answer after it.
 REGISTRY_RECORD_END = re.compile(r">>> Last update of WHOIS database", re.IGNORECASE)
+ORG_LINE = re.compile(r"^Registrant Organization:(.*)$", re.IGNORECASE | re.MULTILINE)
 COUNTRY_LINE = re.compile(r"^Registrant Country:(.*)$", re.IGNORECASE | re.MULTILINE)
 NAME_SERVER_LINE = re.compile(r"^Name Server:(.*)$", re.IGNORECASE | re.MULTILINE)
 DNSSEC_LINE = re.compile(r"^DNSSEC:(.*)$", re.IGNORECASE | re.MULTILINE)
@@ -67,8 +68,12 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[dict[str, Any]]:
                 ),
                 "contact_names": get_list_from_string(scan_output_dict.get("name", "")),
                 "dnssec": _dnssec(scan_output_dict, registry_record),
-                "org": _registrant_value(scan_output_dict, ORG_FIELDS),
-                "country": _registrant_country(scan_output_dict, registry_record),
+                "org": _registrant_value(
+                    scan_output_dict, ORG_FIELDS, registry_record, ORG_LINE
+                ),
+                "country": _registrant_value(
+                    scan_output_dict, COUNTRY_FIELDS, registry_record, COUNTRY_LINE
+                ),
             }
 
             for field in OPTIONAL_FIELDS:
@@ -134,23 +139,18 @@ def _registry_values(registry_record: str, line: re.Pattern[str]) -> list[str]:
     return [value for value in values if value != ""]
 
 
-def _registrant_value(scan_output: dict[str, Any], fields: list[str]) -> str | None:
-    """Returns the first parsed field holding a value."""
+def _registrant_value(
+    scan_output: dict[str, Any],
+    fields: list[str],
+    registry_record: str,
+    line: re.Pattern[str],
+) -> str | None:
+    """Returns the first parsed field holding a value, else the registry record's line."""
     for field in fields:
         value = scan_output.get(field)
         if value is not None and len(value) > 0:
             return _format_str(value)
-    return None
-
-
-def _registrant_country(
-    scan_output: dict[str, Any], registry_record: str
-) -> str | None:
-    """Returns the parsed registrant country, else the registry record's."""
-    country = _registrant_value(scan_output, COUNTRY_FIELDS)
-    if country is not None:
-        return country
-    registry_values = _registry_values(registry_record, COUNTRY_LINE)
+    registry_values = _registry_values(registry_record, line)
     if len(registry_values) == 0:
         return None
     return registry_values[0]

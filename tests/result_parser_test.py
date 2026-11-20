@@ -204,3 +204,32 @@ def testParseResults_whenRegistryNameServersAndDnssecAreEmpty_shouldNotReadTheRe
 
     assert output["name_servers"] == []
     assert output["dnssec"] == []
+
+
+def testParseResults_whenIoParserMissesTheOrg_shouldReadItFromTheRegistryRecord(
+    docker_io_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that the .io organisation is read from the registry record."""
+    output = next(result_parser.parse_results(docker_io_whois))
+
+    assert output["org"] == "Docker Inc."
+
+
+def testParseResults_whenCaParserHasNoOrgKey_shouldReadItFromTheRegistryRecord(
+    shopify_ca_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that the .ca organisation is read from the registry record."""
+    output = next(result_parser.parse_results(shopify_ca_whois))
+
+    assert output["org"] == "Shopify Inc."
+
+
+def testParseResults_whenRegistryOrgIsEmpty_shouldNotReadTheReferral(
+    proton_me_whois_with_empty_registry_values: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that an empty registry organisation is ignored and the referral is not read."""
+    output = next(
+        result_parser.parse_results(proton_me_whois_with_empty_registry_values)
+    )
+
+    assert output["org"] is None

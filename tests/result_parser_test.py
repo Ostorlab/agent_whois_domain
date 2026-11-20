@@ -233,3 +233,37 @@ def testParseResults_whenRegistryOrgIsEmpty_shouldNotReadTheReferral(
     )
 
     assert output["org"] is None
+
+
+def testParseResults_whenStatusIsRepeatedWithAndWithoutLink_shouldReturnEachCodeOnce(
+    proton_me_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that the registry and registrar statuses collapse to one code each."""
+    output = next(result_parser.parse_results(proton_me_whois))
+
+    assert output["status"] == [
+        "clientDeleteProhibited",
+        "serverDeleteProhibited",
+        "clientTransferProhibited",
+        "serverTransferProhibited",
+        "clientUpdateProhibited",
+        "serverUpdateProhibited",
+    ]
+
+
+def testParseResults_whenStatusLinkIsInParentheses_shouldDropIt() -> None:
+    """Ensure that a bracketed link is dropped and a plain status is kept whole."""
+    scan_output = {
+        "domain_name": "example.com",
+        "status": [
+            "clientTransferProhibited (https://www.icann.org/epp#clientTransferProhibited)",
+            "Registered until expiry date.",
+        ],
+    }
+
+    output = next(result_parser.parse_results(scan_output))
+
+    assert output["status"] == [
+        "clientTransferProhibited",
+        "Registered until expiry date.",
+    ]

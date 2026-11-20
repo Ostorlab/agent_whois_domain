@@ -29,6 +29,8 @@ ORG_LINE = re.compile(r"^Registrant Organization:(.*)$", re.IGNORECASE | re.MULT
 COUNTRY_LINE = re.compile(r"^Registrant Country:(.*)$", re.IGNORECASE | re.MULTILINE)
 NAME_SERVER_LINE = re.compile(r"^Name Server:(.*)$", re.IGNORECASE | re.MULTILINE)
 DNSSEC_LINE = re.compile(r"^DNSSEC:(.*)$", re.IGNORECASE | re.MULTILINE)
+# The ICANN link written after an EPP status code.
+STATUS_LINK = re.compile(r"\s+\(?https?://\S*$")
 
 
 def parse_results(results: whois.parser.WhoisCom) -> Iterator[dict[str, Any]]:
@@ -62,7 +64,9 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[dict[str, Any]]:
                 ),
                 "name": name,
                 "emails": [email for email in found_emails if _is_valid_email(email)],
-                "status": get_list_from_string(scan_output_dict.get("status", "")),
+                "status": _status_codes(
+                    get_list_from_string(scan_output_dict.get("status", ""))
+                ),
                 "name_servers": _normalize_name_servers(
                     _name_servers(scan_output_dict, registry_record)
                 ),
@@ -181,6 +185,12 @@ def _dnssec(scan_output: dict[str, Any], registry_record: str) -> list[str]:
     if len(dnssec) > 0:
         return dnssec
     return _registry_values(registry_record, DNSSEC_LINE)
+
+
+def _status_codes(statuses: list[str]) -> list[str]:
+    """Returns each status code once, in first-seen order, without its ICANN link."""
+    codes = [STATUS_LINK.sub("", status) for status in statuses]
+    return list(dict.fromkeys(codes))
 
 
 def _normalize_name_servers(name_servers: list[str]) -> list[str]:

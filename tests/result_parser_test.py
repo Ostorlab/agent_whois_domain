@@ -267,3 +267,13 @@ def testParseResults_whenStatusLinkIsInParentheses_shouldDropIt() -> None:
         "clientTransferProhibited",
         "Registered until expiry date.",
     ]
+
+
+def testParseResults_whenFieldsAreMissing_shouldReturnEmptyLists() -> None:
+    """Ensure that missing list fields are empty lists, not lists of an empty string."""
+    output = next(result_parser.parse_results({"domain_name": "example.com"}))
+
+    assert output["contact_names"] == []
+    assert output["dnssec"] == []
+    assert output["status"] == []
+    assert output["name_servers"] == []

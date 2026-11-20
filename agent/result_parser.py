@@ -119,10 +119,10 @@ def get_list_from_string(scan_output_value: str | list[str]) -> list[str]:
        scan_output_value: The value to convert
 
     Returns:
-       A list from the scan_output_value.
+       A list from the scan_output_value, empty for an empty or undisclosed string.
     """
     if isinstance(scan_output_value, str):
-        if scan_output_value == UNDISCLOSED_VALUE:
+        if scan_output_value in ("", UNDISCLOSED_VALUE):
             return []
         return [scan_output_value]
     else:
@@ -162,11 +162,7 @@ def _registrant_value(
 
 def _name_servers(scan_output: dict[str, Any], registry_record: str) -> list[str]:
     """Returns the parsed name servers, else the registry record's without a trailing dot."""
-    name_servers = [
-        server
-        for server in get_list_from_string(scan_output.get("name_servers", ""))
-        if server != ""
-    ]
+    name_servers = get_list_from_string(scan_output.get("name_servers", ""))
     if len(name_servers) > 0:
         return name_servers
     return [
@@ -177,11 +173,7 @@ def _name_servers(scan_output: dict[str, Any], registry_record: str) -> list[str
 
 def _dnssec(scan_output: dict[str, Any], registry_record: str) -> list[str]:
     """Returns the parsed DNSSEC state, else the registry record's."""
-    dnssec = [
-        state
-        for state in get_list_from_string(scan_output.get("dnssec", ""))
-        if state != ""
-    ]
+    dnssec = get_list_from_string(scan_output.get("dnssec", ""))
     if len(dnssec) > 0:
         return dnssec
     return _registry_values(registry_record, DNSSEC_LINE)

@@ -34,6 +34,8 @@ WAIT_TIME = 10
 RETRY_NUMBER = 3
 # Sent to RDAP servers, some of which refuse urllib's own User-Agent.
 USER_AGENT = "ostorlab-agent-whois-domain"
+# The whois fields the registrar's RDAP record fills when whois leaves them empty.
+REGISTRANT_FIELDS = ["org", "country"]
 
 
 class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
@@ -86,13 +88,18 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
             if whois_output is None and rdap_response is None:
                 return
 
+            whois_records = (
+                []
+                if whois_output is None
+                else list(result_parser.parse_results(whois_output))
+            )
             registrar_response = None
-            if rdap_response is not None:
+            if rdap_response is not None and _lacks_registrant(whois_records) is True:
                 registrar_response = rdap.fetch_registrar(
                     rdap_response, domain_object.fld, self._user_agent
                 )
             self._emit_result(
-                domain_object.fld, whois_output, rdap_response, registrar_response
+                domain_object.fld, whois_records, rdap_response, registrar_response
             )
         else:
             logger.error("domain is not a valid URL: %s", domain)
@@ -140,7 +147,7 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
     def _emit_result(
         self,
         domain: str,
-        whois_output: whois.parser.WhoisCom | None,
+        whois_records: list[dict[str, Any]],
         rdap_response: dict[str, Any] | None,
         registrar_response: dict[str, Any] | None,
     ) -> None:
@@ -153,7 +160,7 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
 
         Args:
             domain: The domain that was looked up.
-            whois_output: The whois result, None when the lookup did not answer.
+            whois_records: The parsed whois records, empty when there are none.
             rdap_response: The registry's RDAP response, None when there is none to use.
             registrar_response: The registrar's RDAP response, None when there is none to use.
         """
@@ -164,11 +171,7 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
         for response in (rdap_response, registrar_response):
             if response is not None:
                 registrant.update(rdap.parse_registrant(response))
-        outputs = (
-            []
-            if whois_output is None
-            else list(result_parser.parse_results(whois_output))
-        )
+        outputs = whois_records
         if len(outputs) == 0:
             if len(rdap_fields) == 0 and len(registrant) == 0:
                 return
@@ -182,6 +185,18 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
                 if data.get(field) is None or data.get(field) == "":
                     data[field] = value
             self.emit(selector=LIB_SELECTOR, data=data)
+
+
+def _lacks_registrant(whois_records: list[dict[str, Any]]) -> bool:
+    """Return whether whois left the registrant's org or country of a record empty."""
+    if len(whois_records) == 0:
+        return True
+    for record in whois_records:
+        for field in REGISTRANT_FIELDS:
+            value = record.get(field)
+            if value is None or value == "":
+                return True
+    return False
 
 
 if __name__ == "__main__":

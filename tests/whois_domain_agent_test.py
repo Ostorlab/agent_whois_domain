@@ -792,7 +792,7 @@ def testAgentWhois_whenTheRegistrarWhoisTimesOut_emitsTheRegistrantFromTheRegist
     ]
 
 
-def testAgentWhois_whenWhoisHasTheRegistrant_keepsItOverTheRegistrarRdap(
+def testAgentWhois_whenWhoisHasTheRegistrant_keepsItWithoutFetchingTheRegistrarRdap(
     arstechnica_message: message.Message,
     rdap_servers: mock.MagicMock,
     test_agent: whois_domain_agent.AgentWhoisDomain,
@@ -800,8 +800,8 @@ def testAgentWhois_whenWhoisHasTheRegistrant_keepsItOverTheRegistrarRdap(
     mocker: plugin.MockerFixture,
     agent_mock: list[message.Message],
 ) -> None:
-    """Ensure that whois keeps precedence for the registrant's org and country."""
-    del agent_persist_mock, rdap_servers
+    """Ensure that whois keeps the registrant's org and country and the registrar is not asked."""
+    del agent_persist_mock
     mocker.patch(
         "whois.whois", return_value={**SCAN_OUTPUT, "domain_name": "arstechnica.com"}
     )
@@ -812,6 +812,9 @@ def testAgentWhois_whenWhoisHasTheRegistrant_keepsItOverTheRegistrarRdap(
     assert len(agent_mock) == 1
     assert agent_mock[0].data["org"] == "Contact Privacy Inc. Customer 0139267634"
     assert agent_mock[0].data["country"] == "CA"
+    assert [call.args[0].full_url for call in rdap_servers.call_args_list] == [
+        "https://rdap.verisign.com/com/v1/domain/arstechnica.com",
+    ]
 
 
 def testAgentWhois_whenWhoisHasOnlyTheOrg_takesTheCountryFromTheRegistrarRdap(

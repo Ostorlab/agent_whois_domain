@@ -35,6 +35,12 @@ NAME_SERVER_LINE = re.compile(r"^Name Server:(.*)$", re.IGNORECASE | re.MULTILIN
 DNSSEC_LINE = re.compile(r"^DNSSEC:(.*)$", re.IGNORECASE | re.MULTILINE)
 # The ICANN link written after an EPP status code.
 STATUS_LINK = re.compile(r"\s+\(?https?://\S*$")
+DOMAIN_STATUS_LINE = re.compile(
+    r"^\s*(?:Domain )?Status:(.*)$", re.IGNORECASE | re.MULTILINE
+)
+NAME_SERVER_STATUS_LINE = re.compile(
+    r"^\s*Name Server Status:(.*)$", re.IGNORECASE | re.MULTILINE
+)
 # DNS Belgium lists each name server on an indented line, its address in parentheses after it.
 BE_NAME_SERVERS_BLOCK = re.compile(
     r"^Nameservers:[ \t]*\r?\n((?:[ \t]+\S[^\r\n]*(?:\r?\n|$))+)", re.MULTILINE
@@ -83,7 +89,10 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[dict[str, Any]]:
                 "name": name,
                 "emails": [email for email in found_emails if _is_valid_email(email)],
                 "status": _status_codes(
-                    get_list_from_string(scan_output_dict.get("status", ""))
+                    _domain_statuses(
+                        get_list_from_string(scan_output_dict.get("status", "")),
+                        raw_text,
+                    )
                 ),
                 "name_servers": _normalize_name_servers(
                     _name_servers(scan_output_dict, registry_record)
@@ -218,6 +227,14 @@ def _dnssec(scan_output: dict[str, Any], registry_record: str) -> list[str]:
     if len(dnssec) > 0:
         return dnssec
     return _registry_values(registry_record, DNSSEC_LINE)
+
+
+def _domain_statuses(statuses: list[str], raw_text: str) -> list[str]:
+    """Returns the statuses without those found only on a "Name Server Status" line."""
+    name_server_only = set(_registry_values(raw_text, NAME_SERVER_STATUS_LINE)) - set(
+        _registry_values(raw_text, DOMAIN_STATUS_LINE)
+    )
+    return [status for status in statuses if status not in name_server_only]
 
 
 def _status_codes(statuses: list[str]) -> list[str]:

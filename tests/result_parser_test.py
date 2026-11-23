@@ -364,3 +364,29 @@ def testParseResults_whenOtherParserUsesRegistrantName_shouldNotReturnItAsTheOrg
     )
 
     assert output["org"] is None
+
+
+def testParseResults_whenNameServerStatusLine_shouldNotReturnItAsADomainStatus(
+    microsoft_com_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that "Name Server Status: active" is not returned as a domain status."""
+    output = next(result_parser.parse_results(microsoft_com_whois))
+
+    assert "active" not in output["status"]
+    assert output["status"] == [
+        "clientDeleteProhibited",
+        "clientTransferProhibited",
+        "clientUpdateProhibited",
+        "serverDeleteProhibited",
+        "serverTransferProhibited",
+        "serverUpdateProhibited",
+    ]
+
+
+def testParseResults_whenTheDomainStatusIsActive_shouldKeepIt(
+    nos_nl_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that a domain whose own status line reads active keeps it."""
+    output = next(result_parser.parse_results(nos_nl_whois))
+
+    assert output["status"] == ["active"]

@@ -1012,10 +1012,12 @@ def testAgentWhois_always_identifiesItselfToRdapServersWithItsVersion(
     del agent_persist_mock
     mocker.patch("whois.whois", return_value=arstechnica_com_whois)
 
+    user_agent = f"{whois_domain_agent.USER_AGENT}/{test_agent.definition.version}"
+
     test_agent.start()
     test_agent.process(arstechnica_message)
 
     assert [
         call.args[0].get_header("User-agent") for call in rdap_servers.call_args_list
-    ] == ["ostorlab-agent-whois-domain/1.0.5"] * 2
+    ] == [user_agent] * 2
     assert len(agent_mock) == 1

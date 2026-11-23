@@ -342,3 +342,25 @@ def testParseResults_whenNameServersCarryAddressesOrDots_shouldKeepEachHostname(
         "ns2.example.com",
         "ns3.example.com",
     ]
+
+
+def testParseResults_whenAuParserUsesRegistrantName_shouldReturnItAsTheOrg(
+    abc_net_au_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that the .au registrant is returned as org."""
+    output = next(result_parser.parse_results(abc_net_au_whois))
+
+    assert output["org"] == "AUSTRALIAN BROADCASTING CORPORATION"
+
+
+def testParseResults_whenOtherParserUsesRegistrantName_shouldNotReturnItAsTheOrg() -> (
+    None
+):
+    """Ensure that a registrant_name outside .au, a person's name, is not returned as org."""
+    output = next(
+        result_parser.parse_results(
+            {"domain_name": "example.com", "registrant_name": "Jane Doe"}
+        )
+    )
+
+    assert output["org"] is None

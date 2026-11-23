@@ -20,6 +20,8 @@ OPTIONAL_FIELDS = [
 # The keys TLD parsers store the registrant's organisation and country under, preferred first.
 ORG_FIELDS = ["org", "registrant_org", "registrant_organization"]
 COUNTRY_FIELDS = ["country", "registrant_country"]
+# The .au parser stores the registrant, the organisation holding the domain, as its name.
+AU_ORG_FIELDS = [*ORG_FIELDS, "registrant_name"]
 # The .be parser reads the registrar's technical contact as the registrant.
 BE_CONTACT_FIELDS = ["org", "name"]
 
@@ -55,6 +57,9 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[dict[str, Any]]:
     scan_output_dict = dict(results)
     raw_text = _raw_text(results)
     registry_record = _registry_record(results)
+    org_fields = ORG_FIELDS
+    if isinstance(results, whois.parser.WhoisAU):
+        org_fields = AU_ORG_FIELDS
     if isinstance(results, whois.parser.WhoisBe):
         scan_output_dict = _dns_belgium_fields(scan_output_dict, raw_text)
     names = set()
@@ -86,7 +91,7 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[dict[str, Any]]:
                 "contact_names": get_list_from_string(scan_output_dict.get("name", "")),
                 "dnssec": _dnssec(scan_output_dict, registry_record),
                 "org": _registrant_value(
-                    scan_output_dict, ORG_FIELDS, registry_record, ORG_LINE
+                    scan_output_dict, org_fields, registry_record, ORG_LINE
                 ),
                 "country": _registrant_value(
                     scan_output_dict, COUNTRY_FIELDS, registry_record, COUNTRY_LINE

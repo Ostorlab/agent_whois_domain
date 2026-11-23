@@ -165,6 +165,12 @@ def nos_nl_whois() -> whois.parser.WhoisEntry:
 
 
 @pytest.fixture
+def abc_net_au_whois() -> whois.parser.WhoisEntry:
+    """The .au answer for abc.net.au, whose parser keeps the registrant under registrant_name."""
+    return _load_whois_answer("abc.net.au")
+
+
+@pytest.fixture
 def rdap_servers(mocker: plugin.MockerFixture) -> mock.MagicMock:
     """Serves the saved .com registry and registrar RDAP answers in place of the network."""
     mocker.patch.object(rdap, "_bootstrap", return_value={"com": COM_RDAP_SERVER})

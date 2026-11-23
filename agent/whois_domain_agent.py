@@ -32,6 +32,8 @@ logger = logging.getLogger(__name__)
 LIB_SELECTOR = "v3.asset.domain_name.whois"
 WAIT_TIME = 10
 RETRY_NUMBER = 3
+# Sent to RDAP servers, some of which refuse urllib's own User-Agent.
+USER_AGENT = "ostorlab-agent-whois-domain"
 
 
 class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
@@ -45,6 +47,8 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
         agent.Agent.__init__(self, agent_definition, agent_settings)
         persist_mixin.AgentPersistMixin.__init__(self, agent_settings)
         self._scope_domain_regex: str | None = self.args.get("scope_domain_regex")
+        version = agent_definition.version
+        self._user_agent = USER_AGENT if version is None else f"{USER_AGENT}/{version}"
 
     def process(self, message: msg.Message) -> None:
         """Starts a whois scan, wait for the scan to finish,
@@ -78,14 +82,14 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
             except whois_exceptions.PywhoisError as e:
                 logger.error(e)
 
-            rdap_response = rdap.fetch(domain_object.fld)
+            rdap_response = rdap.fetch(domain_object.fld, self._user_agent)
             if whois_output is None and rdap_response is None:
                 return
 
             registrar_response = None
             if rdap_response is not None:
                 registrar_response = rdap.fetch_registrar(
-                    rdap_response, domain_object.fld
+                    rdap_response, domain_object.fld, self._user_agent
                 )
             self._emit_result(
                 domain_object.fld, whois_output, rdap_response, registrar_response

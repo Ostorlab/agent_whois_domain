@@ -994,3 +994,25 @@ def testAgentWhois_whenTheRegistrarPublishesARedactionNotice_emitsItAsPublished(
     assert len(agent_mock) == 1
     assert agent_mock[0].data["org"] == "REDACTED FOR PRIVACY"
     assert agent_mock[0].data["country"] == "US"
+
+
+def testAgentWhois_always_identifiesItselfToRdapServersWithItsVersion(
+    arstechnica_message: message.Message,
+    arstechnica_com_whois: whois.parser.WhoisEntry,
+    rdap_servers: mock.MagicMock,
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """Ensure that the registry and registrar lookups carry the agent's User-Agent."""
+    del agent_persist_mock
+    mocker.patch("whois.whois", return_value=arstechnica_com_whois)
+
+    test_agent.start()
+    test_agent.process(arstechnica_message)
+
+    assert [
+        call.args[0].get_header("User-agent") for call in rdap_servers.call_args_list
+    ] == ["ostorlab-agent-whois-domain/1.0.5"] * 2
+    assert len(agent_mock) == 1

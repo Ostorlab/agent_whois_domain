@@ -12,7 +12,10 @@ import json
 import logging
 import time
 import typing
+import urllib.error
 import urllib.request
+
+import tenacity
 
 logger = logging.getLogger(__name__)
 
@@ -31,19 +34,25 @@ EVENT_FIELDS = {
 }
 # The media type a registry's link to the registrar's RDAP record carries.
 RDAP_MEDIA_TYPE = "application/rdap+json"
+# A server that answers HTTP 429 is asked again this many times in all, waiting longer each time.
+RATE_LIMITED_ATTEMPTS = 3
+RATE_LIMITED_STATUS = 429
 
 
 _SERVERS: dict[str, str] = {}
 _FAILED_AT: float | None = None
 
 
-def _bootstrap() -> dict[str, str]:
+def _bootstrap(user_agent: str) -> dict[str, str]:
     """Map every TLD to its RDAP server, from IANA's bootstrap registry.
 
     A reading is kept, as the registry is around a megabyte and changes rarely.
     A failed reading is not, so an outage does not disable RDAP for the rest of
     the agent's life, but it is not retried for every domain either: a reading
     is attempted again only once the retry window has passed.
+
+    Args:
+        user_agent: The User-Agent the request identifies the agent with.
 
     Returns:
         The server of each TLD that has one, empty when the registry could not
@@ -56,8 +65,9 @@ def _bootstrap() -> dict[str, str]:
     if _FAILED_AT is not None and time.monotonic() - _FAILED_AT < RETRY_AFTER:
         return {}
 
+    request = urllib.request.Request(BOOTSTRAP_URL, headers={"User-Agent": user_agent})
     try:
-        with urllib.request.urlopen(BOOTSTRAP_URL, timeout=TIMEOUT) as response:
+        with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
             registry = json.load(response)
     except (
         OSError,
@@ -80,11 +90,12 @@ def _bootstrap() -> dict[str, str]:
     return _SERVERS
 
 
-def fetch(domain: str) -> dict[str, typing.Any] | None:
+def fetch(domain: str, user_agent: str) -> dict[str, typing.Any] | None:
     """Look a domain up over RDAP.
 
     Args:
         domain: The registrable domain to look up.
+        user_agent: The User-Agent the requests identify the agent with.
 
     Returns:
         The RDAP response, None when the TLD has no RDAP server or the lookup
@@ -99,22 +110,23 @@ def fetch(domain: str) -> dict[str, typing.Any] | None:
         return None
 
     tld = hostname.rsplit(".", 1)[-1].lower()
-    server = _bootstrap().get(tld)
+    server = _bootstrap(user_agent).get(tld)
     if server is None:
         logger.info("No RDAP server for .%s, relying on whois for %s", tld, domain)
         return None
 
-    return _lookup(f"{server}/domain/{hostname}", domain)
+    return _lookup(f"{server}/domain/{hostname}", domain, user_agent)
 
 
 def fetch_registrar(
-    response: dict[str, typing.Any], domain: str
+    response: dict[str, typing.Any], domain: str, user_agent: str
 ) -> dict[str, typing.Any] | None:
     """Follow a registry's RDAP answer to the registrar's record of the domain.
 
     Args:
         response: The registry's RDAP answer.
         domain: The domain the answer is about.
+        user_agent: The User-Agent the request identifies the agent with.
 
     Returns:
         The registrar's RDAP answer, None when the registry links none or the
@@ -123,7 +135,7 @@ def fetch_registrar(
     url = _registrar_link(response)
     if url is None:
         return None
-    return _lookup(url, domain)
+    return _lookup(url, domain, user_agent)
 
 
 def _registrar_link(response: dict[str, typing.Any]) -> str | None:
@@ -137,12 +149,13 @@ def _registrar_link(response: dict[str, typing.Any]) -> str | None:
     return None
 
 
-def _lookup(url: str, domain: str) -> dict[str, typing.Any] | None:
+def _lookup(url: str, domain: str, user_agent: str) -> dict[str, typing.Any] | None:
     """Return the RDAP answer at a URL, None when it did not answer with an object."""
-    request = urllib.request.Request(url, headers={"Accept": RDAP_MEDIA_TYPE})
+    request = urllib.request.Request(
+        url, headers={"Accept": RDAP_MEDIA_TYPE, "User-Agent": user_agent}
+    )
     try:
-        with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
-            answer = json.load(response)
+        answer = _read(request)
     except (
         OSError,
         ValueError,
@@ -155,6 +168,25 @@ def _lookup(url: str, domain: str) -> dict[str, typing.Any] | None:
         logger.warning("The RDAP answer for %s is not an object", domain)
         return None
     return answer
+
+
+def _is_rate_limited(error: BaseException) -> bool:
+    """Tell whether a request failed because the server asks to slow down."""
+    return (
+        isinstance(error, urllib.error.HTTPError) and error.code == RATE_LIMITED_STATUS
+    )
+
+
+@tenacity.retry(
+    retry=tenacity.retry_if_exception(_is_rate_limited),
+    stop=tenacity.stop_after_attempt(RATE_LIMITED_ATTEMPTS),
+    wait=tenacity.wait_exponential(multiplier=1, min=1, max=4),
+    reraise=True,
+)
+def _read(request: urllib.request.Request) -> typing.Any:
+    """Return the JSON a request answers with, asking again after an HTTP 429."""
+    with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
+        return json.load(response)
 
 
 def _dicts(value: typing.Any) -> list[dict[str, typing.Any]]:

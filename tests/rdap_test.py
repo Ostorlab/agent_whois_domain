@@ -1,6 +1,9 @@
 """Unit tests for the RDAP lookups."""
 
+import email.message
 import http.client
+import io
+import urllib.error
 from typing import Any
 from unittest import mock
 
@@ -8,6 +11,8 @@ import pytest
 from pytest_mock import plugin
 
 from agent import rdap
+
+USER_AGENT = "ostorlab-agent-whois-domain/1.0.5"
 
 
 @pytest.fixture(autouse=True)
@@ -85,7 +90,7 @@ def testRdapFetch_whenTldHasNoServer_returnsNone(
     )
     urlopen = mocker.patch("urllib.request.urlopen")
 
-    assert rdap.fetch("ostorlab.co") is None
+    assert rdap.fetch("ostorlab.co", USER_AGENT) is None
     urlopen.assert_not_called()
 
 
@@ -98,7 +103,7 @@ def testRdapFetch_whenLookupFails_returnsNone(
     )
     mocker.patch("urllib.request.urlopen", side_effect=OSError("boom"))
 
-    assert rdap.fetch("ebay.com") is None
+    assert rdap.fetch("ebay.com", USER_AGENT) is None
 
 
 def testRdapParse_whenDelegationIsSigned_reportsItAsWhoisWould() -> None:
@@ -138,7 +143,7 @@ def testRdapFetch_whenTldIsInternationalised_looksUpItsALabel(
     )
     urlopen = mocker.patch("urllib.request.urlopen", side_effect=OSError("stop here"))
 
-    rdap.fetch("nic.\u307f\u3093\u306a")
+    rdap.fetch("nic.\u307f\u3093\u306a", USER_AGENT)
 
     assert (
         urlopen.call_args.args[0].full_url
@@ -152,9 +157,9 @@ def testRdapBootstrap_whenTheRegistryIsUnreachable_readsItAgainNextTime(
     """Ensure that an outage does not disable RDAP for the rest of the run."""
     urlopen = mocker.patch("urllib.request.urlopen", side_effect=OSError("down"))
 
-    assert rdap._bootstrap() == {}
+    assert rdap._bootstrap(USER_AGENT) == {}
     rdap._FAILED_AT = None  # as if the retry window had passed
-    assert rdap._bootstrap() == {}
+    assert rdap._bootstrap(USER_AGENT) == {}
 
     assert urlopen.call_count == 2
 
@@ -169,8 +174,8 @@ def testRdapBootstrap_whenTheRegistryIsRead_keepsIt(
     mocker.patch("urllib.request.urlopen", return_value=response)
     urlopen = mocker.patch("json.load", return_value=registry)
 
-    assert rdap._bootstrap() == {"com": "https://rdap.example/com"}
-    assert rdap._bootstrap() == {"com": "https://rdap.example/com"}
+    assert rdap._bootstrap(USER_AGENT) == {"com": "https://rdap.example/com"}
+    assert rdap._bootstrap(USER_AGENT) == {"com": "https://rdap.example/com"}
 
     assert urlopen.call_count == 1
 
@@ -181,8 +186,8 @@ def testRdapBootstrap_whenAReadingJustFailed_doesNotDownloadItAgain(
     """Ensure that an outage does not stall every domain on the download."""
     urlopen = mocker.patch("urllib.request.urlopen", side_effect=OSError("down"))
 
-    assert rdap._bootstrap() == {}
-    assert rdap._bootstrap() == {}
+    assert rdap._bootstrap(USER_AGENT) == {}
+    assert rdap._bootstrap(USER_AGENT) == {}
 
     assert urlopen.call_count == 1
 
@@ -252,7 +257,7 @@ def testRdapBootstrap_whenTheRegistryIsMalformed_readsItAsEmpty(
     mocker.patch("urllib.request.urlopen", return_value=response)
     mocker.patch("json.load", return_value=["not", "the", "registry"])
 
-    assert rdap._bootstrap() == {}
+    assert rdap._bootstrap(USER_AGENT) == {}
 
 
 def testRdapBootstrap_whenAServiceHasNoServer_skipsIt(
@@ -269,7 +274,7 @@ def testRdapBootstrap_whenAServiceHasNoServer_skipsIt(
         },
     )
 
-    assert rdap._bootstrap() == {"com": "https://rdap.example/com"}
+    assert rdap._bootstrap(USER_AGENT) == {"com": "https://rdap.example/com"}
 
 
 def testRdapBootstrap_whenTheMachineJustBooted_stillReadsTheRegistry(
@@ -279,7 +284,7 @@ def testRdapBootstrap_whenTheMachineJustBooted_stillReadsTheRegistry(
     mocker.patch("time.monotonic", return_value=3.0)
     urlopen = mocker.patch("urllib.request.urlopen", side_effect=OSError("down"))
 
-    rdap._bootstrap()
+    rdap._bootstrap(USER_AGENT)
 
     assert urlopen.call_count == 1
 
@@ -297,7 +302,7 @@ def testRdapFetch_whenTheAnswerIsNotAnObject_returnsNone(
     mocker.patch("urllib.request.urlopen", return_value=response)
     mocker.patch("json.load", return_value=answer)
 
-    assert rdap.fetch("ebay.com") is None
+    assert rdap.fetch("ebay.com", USER_AGENT) is None
 
 
 def testRdapFetchRegistrar_whenTheRegistryLinksTheRegistrar_returnsItsAnswer(
@@ -305,7 +310,7 @@ def testRdapFetchRegistrar_whenTheRegistryLinksTheRegistrar_returnsItsAnswer(
     rdap_servers: mock.MagicMock,
 ) -> None:
     """Ensure that the registrar's RDAP record linked by the registry is looked up."""
-    answer = rdap.fetch_registrar(techcrunch_com_rdap, "techcrunch.com")
+    answer = rdap.fetch_registrar(techcrunch_com_rdap, "techcrunch.com", USER_AGENT)
 
     assert answer is not None
     assert answer["port43"] == "whois.markmonitor.com"
@@ -347,7 +352,7 @@ def testRdapFetchRegistrar_whenTheRegistryLinksNoRegistrarRecord_returnsNone(
     """Ensure that only an https link to an RDAP record is followed."""
     urlopen = mocker.patch("urllib.request.urlopen")
 
-    assert rdap.fetch_registrar({"links": links}, "techcrunch.com") is None
+    assert rdap.fetch_registrar({"links": links}, "techcrunch.com", USER_AGENT) is None
     urlopen.assert_not_called()
 
 
@@ -367,7 +372,9 @@ def testRdapFetchRegistrar_whenTheRegistrarLookupFails_returnsNone(
     """Ensure that an unanswered registrar lookup is skipped rather than raising."""
     mocker.patch("urllib.request.urlopen", side_effect=error)
 
-    assert rdap.fetch_registrar(techcrunch_com_rdap, "techcrunch.com") is None
+    assert (
+        rdap.fetch_registrar(techcrunch_com_rdap, "techcrunch.com", USER_AGENT) is None
+    )
 
 
 def testRdapParseRegistrant_whenTheRegistrarPublishesOrgAndCountry_readsBoth(
@@ -450,6 +457,98 @@ def testRdapParseRegistrant_whenTheRegistryPublishesTheRegistrant_readsIt(
     parsed = rdap.parse_registrant(lemonde_fr_rdap)
 
     assert parsed == {"org": "SOCIETE EDITRICE DU MONDE", "country": "FR"}
+
+
+def testRdapFetch_always_identifiesTheAgentToTheRegistryAndTheRegistrar(
+    rdap_servers: mock.MagicMock,
+) -> None:
+    """Ensure that the RDAP lookups name the agent rather than urllib."""
+    answer = rdap.fetch("techcrunch.com", USER_AGENT)
+    assert answer is not None
+    rdap.fetch_registrar(answer, "techcrunch.com", USER_AGENT)
+
+    assert [
+        call.args[0].get_header("User-agent") for call in rdap_servers.call_args_list
+    ] == [USER_AGENT, USER_AGENT]
+
+
+def testRdapBootstrap_always_identifiesTheAgent(
+    mocker: plugin.MockerFixture,
+) -> None:
+    """Ensure that the bootstrap registry download names the agent rather than urllib."""
+    urlopen = mocker.patch("urllib.request.urlopen", side_effect=OSError("down"))
+
+    rdap._bootstrap(USER_AGENT)
+
+    assert urlopen.call_args.args[0].get_header("User-agent") == USER_AGENT
+
+
+def _rate_limited(url: str) -> urllib.error.HTTPError:
+    """Builds the error urllib raises for an HTTP 429 answer."""
+    return urllib.error.HTTPError(
+        url, 429, "Too Many Requests", email.message.Message(), None
+    )
+
+
+def testRdapFetch_whenTheServerAsksToSlowDown_asksAgainAfterAWait(
+    mocker: plugin.MockerFixture,
+) -> None:
+    """Ensure that an HTTP 429 is retried after a short wait."""
+    mocker.patch.object(
+        rdap, "_bootstrap", return_value={"com": "https://rdap.example"}
+    )
+    sleep = mocker.patch("time.sleep")
+    urlopen = mocker.patch(
+        "urllib.request.urlopen",
+        side_effect=[
+            _rate_limited("https://rdap.example/domain/ebay.com"),
+            io.BytesIO(b'{"ldhName": "ebay.com"}'),
+        ],
+    )
+
+    assert rdap.fetch("ebay.com", USER_AGENT) == {"ldhName": "ebay.com"}
+    assert urlopen.call_count == 2
+    assert sleep.call_count == 1
+
+
+def testRdapFetch_whenTheServerKeepsAskingToSlowDown_givesUpAfterThreeTries(
+    mocker: plugin.MockerFixture,
+) -> None:
+    """Ensure that the retries on HTTP 429 are bounded."""
+    mocker.patch.object(
+        rdap, "_bootstrap", return_value={"com": "https://rdap.example"}
+    )
+    sleep = mocker.patch("time.sleep")
+    urlopen = mocker.patch(
+        "urllib.request.urlopen",
+        side_effect=_rate_limited("https://rdap.example/domain/ebay.com"),
+    )
+
+    assert rdap.fetch("ebay.com", USER_AGENT) is None
+    assert urlopen.call_count == 3
+    assert [call.args[0] for call in sleep.call_args_list] == [1, 2]
+
+
+def testRdapFetch_whenTheServerRefuses_doesNotAskAgain(
+    mocker: plugin.MockerFixture,
+) -> None:
+    """Ensure that an HTTP error other than 429 is not retried."""
+    mocker.patch.object(
+        rdap, "_bootstrap", return_value={"com": "https://rdap.example"}
+    )
+    urlopen = mocker.patch(
+        "urllib.request.urlopen",
+        side_effect=urllib.error.HTTPError(
+            "https://rdap.example/domain/ebay.com",
+            403,
+            "Forbidden",
+            email.message.Message(),
+            None,
+        ),
+    )
+
+    assert rdap.fetch("ebay.com", USER_AGENT) is None
+    assert urlopen.call_count == 1
 
 
 def testRdapParseRegistrant_whenTheAddressHasNoCc_readsItsCountryPart() -> None:

@@ -59,6 +59,8 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
         Args:
             message:  The message to process from ostorlab runtime.
         """
+        if message.selector == LIB_SELECTOR:
+            return
         domain = message.data.get("name")
         if domain is None or domain == "":
             return
@@ -70,7 +72,10 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
 
         if domain_object is not None:
             logger.info("Processing message of selector : %s.", message.selector)
-            if self.set_add("agent_whois_domain_asset", domain_object.fld) is False:
+            if (
+                self.set_add("agent_whois_domain_asset", _a_label(domain_object.fld))
+                is False
+            ):
                 logger.info(
                     "target %s was processed before, exiting", domain_object.fld
                 )
@@ -197,6 +202,14 @@ def _lacks_registrant(whois_records: list[dict[str, Any]]) -> bool:
             if value is None or value == "":
                 return True
     return False
+
+
+def _a_label(domain: str) -> str:
+    """Return the ASCII form of a domain, so both spellings of an IDN are looked up once."""
+    try:
+        return domain.encode("idna").decode("ascii").lower()
+    except UnicodeError:
+        return domain
 
 
 if __name__ == "__main__":

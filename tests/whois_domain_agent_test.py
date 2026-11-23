@@ -1021,3 +1021,46 @@ def testAgentWhois_always_identifiesItselfToRdapServersWithItsVersion(
         call.args[0].get_header("User-agent") for call in rdap_servers.call_args_list
     ] == [user_agent] * 2
     assert len(agent_mock) == 1
+
+
+def testAgentWhois_whenAnIdnArrivesInBothSpellings_looksItUpOnce(
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """Ensure that the unicode and ASCII forms of a domain share one lookup."""
+    del agent_persist_mock
+    mock_whois = mocker.patch(
+        "whois.whois", return_value={"domain_name": "xn--bcher-kva.com"}
+    )
+
+    test_agent.start()
+    for name in ("bücher.com", "xn--bcher-kva.com"):
+        test_agent.process(
+            message.Message.from_data("v3.asset.domain_name", data={"name": name})
+        )
+
+    mock_whois.assert_called_once()
+    assert len(agent_mock) == 1
+
+
+def testAgentWhois_whenItReceivesAWhoisMessage_skipsIt(
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """Ensure that the agent does not look up the domains of its own output again."""
+    del agent_persist_mock
+    mock_whois = mocker.patch("whois.whois", return_value=SCAN_OUTPUT)
+
+    test_agent.start()
+    test_agent.process(
+        message.Message.from_data(
+            "v3.asset.domain_name.whois", data={"name": "xn--bcher-kva.com"}
+        )
+    )
+
+    mock_whois.assert_not_called()
+    assert len(agent_mock) == 0

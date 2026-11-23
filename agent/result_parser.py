@@ -244,11 +244,11 @@ def _status_codes(statuses: list[str]) -> list[str]:
 
 
 def _normalize_name_servers(name_servers: list[str]) -> list[str]:
-    """Returns the hostnames the name server values hold, lowercase and once each.
+    """Returns the hostnames the name server values hold, lowercase, once each and sorted.
 
     A parser may join several servers, or a server and its addresses, in one value.
     """
-    return list(
+    return sorted(
         {
             word.lower()
             for name_server in name_servers

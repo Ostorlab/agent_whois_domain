@@ -295,7 +295,7 @@ def testParseResults_whenBeAnswer_shouldReturnEachNameServerAndTheRegistrar(
     """Ensure that the .be name servers block and registrar name are read."""
     output = next(result_parser.parse_results(rtbf_be_whois))
 
-    assert sorted(output["name_servers"]) == [
+    assert output["name_servers"] == [
         "ns1.belnet.be",
         "ns1.rtbf.be",
         "ns2.belnet.be",
@@ -309,10 +309,10 @@ def testParseResults_whenBeAnswer_shouldReturnEachNameServerAndTheRegistrar(
 def testParseResults_whenNlParserReadsOtherWordsAsNameServers_shouldKeepOnlyHostnames(
     nos_nl_whois: whois.parser.WhoisEntry,
 ) -> None:
-    """Ensure that only hostnames are returned as name servers."""
+    """Ensure that only hostnames are returned as name servers, sorted."""
     output = next(result_parser.parse_results(nos_nl_whois))
 
-    assert sorted(output["name_servers"]) == [
+    assert output["name_servers"] == [
         "ns-1511.awsdns-60.org",
         "ns-1582.awsdns-05.co.uk",
         "ns-311.awsdns-38.com",
@@ -337,7 +337,7 @@ def testParseResults_whenNameServersCarryAddressesOrDots_shouldKeepEachHostname(
 
     output = next(result_parser.parse_results(scan_output))
 
-    assert sorted(output["name_servers"]) == [
+    assert output["name_servers"] == [
         "ns1.example.com.",
         "ns2.example.com",
         "ns3.example.com",

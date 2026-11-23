@@ -912,6 +912,28 @@ def testAgentWhois_whenWhoisFailsAndBothRdapRecordsAnswer_emitsTheRegistrant(
     assert emitted["country"] == "US"
 
 
+def testAgentWhois_whenOnlyTheRegistryPublishesTheRegistrant_emitsIt(
+    lemonde_fr_rdap: dict[str, Any],
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """Ensure that a registry's own registrant fills what whois did not give."""
+    del agent_persist_mock
+    mocker.patch("whois.whois", return_value={"domain_name": "lemonde.fr"})
+    mocker.patch.object(rdap, "fetch", return_value=lemonde_fr_rdap)
+
+    test_agent.start()
+    test_agent.process(
+        message.Message.from_data("v3.asset.domain_name", data={"name": "lemonde.fr"})
+    )
+
+    assert len(agent_mock) == 1
+    assert agent_mock[0].data["org"] == "SOCIETE EDITRICE DU MONDE"
+    assert agent_mock[0].data["country"] == "FR"
+
+
 def _registrant_answer(**vcard: str) -> dict[str, Any]:
     """Builds an RDAP answer whose registrant publishes the given org and cc."""
     properties: list[Any] = [["version", {}, "text", "4.0"]]
@@ -922,6 +944,31 @@ def _registrant_answer(**vcard: str) -> dict[str, Any]:
     return {
         "entities": [{"roles": ["registrant"], "vcardArray": ["vcard", properties]}]
     }
+
+
+def testAgentWhois_whenRegistryAndRegistrarPublishTheRegistrant_prefersTheRegistrar(
+    scan_message: message.Message,
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """Ensure that the registrar's values win, the registry's filling what it lacks."""
+    del agent_persist_mock
+    mocker.patch("whois.whois", return_value={"domain_name": "medallia.com"})
+    mocker.patch.object(
+        rdap, "fetch", return_value=_registrant_answer(org="Registry Org", cc="FR")
+    )
+    mocker.patch.object(
+        rdap, "fetch_registrar", return_value=_registrant_answer(org="Registrar Org")
+    )
+
+    test_agent.start()
+    test_agent.process(scan_message)
+
+    assert len(agent_mock) == 1
+    assert agent_mock[0].data["org"] == "Registrar Org"
+    assert agent_mock[0].data["country"] == "FR"
 
 
 def testAgentWhois_whenTheRegistrarPublishesARedactionNotice_emitsItAsPublished(

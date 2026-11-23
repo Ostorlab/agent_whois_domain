@@ -3,7 +3,8 @@
 RDAP replaced WHOIS as the authoritative source of gTLD registration data, and
 answers with JSON instead of the free text WHOIS returns. It does not cover
 every TLD, and many registries redact the registrant entity, so the registrant's
-organisation and country are read from the registrar's record the registry links to.
+organisation and country are read from the registrar's record the registry links to,
+else from the registry's own.
 """
 
 import http.client
@@ -261,7 +262,7 @@ def parse_registrant(response: dict[str, typing.Any]) -> dict[str, str]:
     """Pull the registrant's organisation and country out of an RDAP answer.
 
     Args:
-        response: A registrar's RDAP domain response.
+        response: A registrar's or registry's RDAP domain response.
 
     Returns:
         The organisation and country the answer publishes, redaction notices

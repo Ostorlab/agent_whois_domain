@@ -443,6 +443,15 @@ def testRdapParseRegistrant_whenValuesAreBlank_leavesThemOut() -> None:
     assert parsed == {}
 
 
+def testRdapParseRegistrant_whenTheRegistryPublishesTheRegistrant_readsIt(
+    lemonde_fr_rdap: dict[str, Any],
+) -> None:
+    """Ensure that a registry's own answer yields the registrant it publishes."""
+    parsed = rdap.parse_registrant(lemonde_fr_rdap)
+
+    assert parsed == {"org": "SOCIETE EDITRICE DU MONDE", "country": "FR"}
+
+
 def testRdapParseRegistrant_whenTheAddressHasNoCc_readsItsCountryPart() -> None:
     """Ensure that the country part of the address stands in for a missing cc."""
     parsed = rdap.parse_registrant(

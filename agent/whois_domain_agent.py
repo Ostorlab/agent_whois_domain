@@ -145,7 +145,7 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
         RDAP answers for the records it carries and whois for the rest, so a TLD
         without RDAP and a lookup that did not answer both keep today's result.
         The registrant's organisation and country come from whois, else from the
-        registrar's RDAP record.
+        registrar's RDAP record, else from the registry's.
 
         Args:
             domain: The domain that was looked up.
@@ -155,11 +155,11 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
         """
         logger.info("emitting results for %s", domain)
         rdap_fields = {} if rdap_response is None else rdap.parse(rdap_response)
-        registrant = (
-            {}
-            if registrar_response is None
-            else rdap.parse_registrant(registrar_response)
-        )
+        registrant: dict[str, str] = {}
+        # The registrar's answer is read last, so its values win over the registry's.
+        for response in (rdap_response, registrar_response):
+            if response is not None:
+                registrant.update(rdap.parse_registrant(response))
         outputs = (
             []
             if whois_output is None

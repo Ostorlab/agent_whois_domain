@@ -40,6 +40,7 @@ BE_NAME_SERVERS_BLOCK = re.compile(
 BE_REGISTRAR_NAME = re.compile(
     r"^Registrar:[ \t]*\r?\n[ \t]+Name:[ \t]*([^\r\n]*)", re.MULTILINE
 )
+HOSTNAME_LABEL = re.compile(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", re.IGNORECASE)
 
 
 def parse_results(results: whois.parser.WhoisCom) -> Iterator[dict[str, Any]]:
@@ -221,8 +222,26 @@ def _status_codes(statuses: list[str]) -> list[str]:
 
 
 def _normalize_name_servers(name_servers: list[str]) -> list[str]:
-    """Normalizes name servers to lowercase and removes duplicates."""
-    return list({ns.lower() for ns in name_servers})
+    """Returns the hostnames the name server values hold, lowercase and once each.
+
+    A parser may join several servers, or a server and its addresses, in one value.
+    """
+    return list(
+        {
+            word.lower()
+            for name_server in name_servers
+            for word in name_server.split()
+            if _is_hostname(word)
+        }
+    )
+
+
+def _is_hostname(value: str) -> bool:
+    """Tells whether a value is a hostname of two labels or more, a trailing dot allowed."""
+    labels = value.removesuffix(".").split(".")
+    if len(labels) < 2 or labels[-1].isdigit() is True:
+        return False
+    return all(HOSTNAME_LABEL.fullmatch(label) is not None for label in labels)
 
 
 def _format_str(value: str | list[str]) -> str:

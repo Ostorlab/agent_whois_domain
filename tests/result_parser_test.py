@@ -304,3 +304,41 @@ def testParseResults_whenBeAnswer_shouldReturnEachNameServerAndTheRegistrar(
     ]
     assert output["registrar"] == "BELNET"
     assert output["status"] == ["NOT AVAILABLE"]
+
+
+def testParseResults_whenNlParserReadsOtherWordsAsNameServers_shouldKeepOnlyHostnames(
+    nos_nl_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that only hostnames are returned as name servers."""
+    output = next(result_parser.parse_results(nos_nl_whois))
+
+    assert sorted(output["name_servers"]) == [
+        "ns-1511.awsdns-60.org",
+        "ns-1582.awsdns-05.co.uk",
+        "ns-311.awsdns-38.com",
+        "ns-823.awsdns-38.net",
+    ]
+
+
+def testParseResults_whenNameServersCarryAddressesOrDots_shouldKeepEachHostname() -> (
+    None
+):
+    """Ensure that joined values give each hostname, without the addresses and words around them."""
+    scan_output = {
+        "domain_name": "example.com",
+        "name_servers": [
+            "ns2.example.com 192.0.2.1 2001:db8::1",
+            "ns1.example.com.\n\tns3.example.com (192.0.2.3)",
+            "Creation",
+            "",
+            "192.0.2.4",
+        ],
+    }
+
+    output = next(result_parser.parse_results(scan_output))
+
+    assert sorted(output["name_servers"]) == [
+        "ns1.example.com.",
+        "ns2.example.com",
+        "ns3.example.com",
+    ]

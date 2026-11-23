@@ -159,6 +159,12 @@ def rtbf_be_whois() -> whois.parser.WhoisEntry:
 
 
 @pytest.fixture
+def nos_nl_whois() -> whois.parser.WhoisEntry:
+    """The .nl answer for nos.nl, whose parser reads words of the next lines as name servers."""
+    return _load_whois_answer("nos.nl")
+
+
+@pytest.fixture
 def rdap_servers(mocker: plugin.MockerFixture) -> mock.MagicMock:
     """Serves the saved .com registry and registrar RDAP answers in place of the network."""
     mocker.patch.object(rdap, "_bootstrap", return_value={"com": COM_RDAP_SERVER})

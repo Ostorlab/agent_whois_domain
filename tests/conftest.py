@@ -153,6 +153,12 @@ def lemonde_fr_rdap() -> dict[str, Any]:
 
 
 @pytest.fixture
+def rtbf_be_whois() -> whois.parser.WhoisEntry:
+    """The .be answer for rtbf.be, hiding the registrant and listing the registrar's technical contact."""
+    return _load_whois_answer("rtbf.be")
+
+
+@pytest.fixture
 def rdap_servers(mocker: plugin.MockerFixture) -> mock.MagicMock:
     """Serves the saved .com registry and registrar RDAP answers in place of the network."""
     mocker.patch.object(rdap, "_bootstrap", return_value={"com": COM_RDAP_SERVER})

@@ -20,6 +20,8 @@ OPTIONAL_FIELDS = [
 # The keys TLD parsers store the registrant's organisation and country under, preferred first.
 ORG_FIELDS = ["org", "registrant_org", "registrant_organization"]
 COUNTRY_FIELDS = ["country", "registrant_country"]
+# The .be parser reads the registrar's technical contact as the registrant.
+BE_CONTACT_FIELDS = ["org", "name"]
 
 UNDISCLOSED_VALUE = "<data not disclosed>"
 
@@ -31,6 +33,13 @@ NAME_SERVER_LINE = re.compile(r"^Name Server:(.*)$", re.IGNORECASE | re.MULTILIN
 DNSSEC_LINE = re.compile(r"^DNSSEC:(.*)$", re.IGNORECASE | re.MULTILINE)
 # The ICANN link written after an EPP status code.
 STATUS_LINK = re.compile(r"\s+\(?https?://\S*$")
+# DNS Belgium lists each name server on an indented line, its address in parentheses after it.
+BE_NAME_SERVERS_BLOCK = re.compile(
+    r"^Nameservers:[ \t]*\r?\n((?:[ \t]+\S[^\r\n]*(?:\r?\n|$))+)", re.MULTILINE
+)
+BE_REGISTRAR_NAME = re.compile(
+    r"^Registrar:[ \t]*\r?\n[ \t]+Name:[ \t]*([^\r\n]*)", re.MULTILINE
+)
 
 
 def parse_results(results: whois.parser.WhoisCom) -> Iterator[dict[str, Any]]:
@@ -43,7 +52,10 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[dict[str, Any]]:
        The parsed output of the whois_domain scan results.
     """
     scan_output_dict = dict(results)
+    raw_text = _raw_text(results)
     registry_record = _registry_record(results)
+    if isinstance(results, whois.parser.WhoisBe):
+        scan_output_dict = _dns_belgium_fields(scan_output_dict, raw_text)
     names = set()
     for name in get_list_from_string(scan_output_dict.pop("domain_name", "")):
         if name is not None:
@@ -129,12 +141,35 @@ def get_list_from_string(scan_output_value: str | list[str]) -> list[str]:
         return scan_output_value or []
 
 
-def _registry_record(results: whois.parser.WhoisCom) -> str:
-    """Returns the registry's record from the raw answer, without the registrar's referral."""
+def _raw_text(results: whois.parser.WhoisCom) -> str:
+    """Returns the raw answer, the registrar's referral included."""
     if not isinstance(results, whois.parser.WhoisEntry):
         return ""
     raw_text: str = results.text
-    return REGISTRY_RECORD_END.split(raw_text, maxsplit=1)[0]
+    return raw_text
+
+
+def _registry_record(results: whois.parser.WhoisCom) -> str:
+    """Returns the registry's record from the raw answer, without the registrar's referral."""
+    return REGISTRY_RECORD_END.split(_raw_text(results), maxsplit=1)[0]
+
+
+def _dns_belgium_fields(scan_output: dict[str, Any], raw_text: str) -> dict[str, Any]:
+    """Returns the .be fields without the technical contact, with the raw answer's name servers and registrar."""
+    fields = {
+        field: value
+        for field, value in scan_output.items()
+        if field not in BE_CONTACT_FIELDS
+    }
+    name_servers = BE_NAME_SERVERS_BLOCK.search(raw_text)
+    if name_servers is not None:
+        fields["name_servers"] = [
+            line.split()[0] for line in name_servers.group(1).splitlines()
+        ]
+    registrar = BE_REGISTRAR_NAME.search(raw_text)
+    if registrar is not None and registrar.group(1).strip() != "":
+        fields["registrar"] = registrar.group(1).strip()
+    return fields
 
 
 def _registry_values(registry_record: str, line: re.Pattern[str]) -> list[str]:

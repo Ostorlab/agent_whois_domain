@@ -277,3 +277,30 @@ def testParseResults_whenFieldsAreMissing_shouldReturnEmptyLists() -> None:
     assert output["dnssec"] == []
     assert output["status"] == []
     assert output["name_servers"] == []
+
+
+def testParseResults_whenBeAnswer_shouldNotReportTheTechnicalContactAsTheRegistrant(
+    rtbf_be_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that the .be registrar's technical contact is not returned as the org."""
+    output = next(result_parser.parse_results(rtbf_be_whois))
+
+    assert output["org"] is None
+    assert output["contact_names"] == []
+
+
+def testParseResults_whenBeAnswer_shouldReturnEachNameServerAndTheRegistrar(
+    rtbf_be_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that the .be name servers block and registrar name are read."""
+    output = next(result_parser.parse_results(rtbf_be_whois))
+
+    assert sorted(output["name_servers"]) == [
+        "ns1.belnet.be",
+        "ns1.rtbf.be",
+        "ns2.belnet.be",
+        "ns2.rtbf.be",
+        "ns3.belnet.be",
+    ]
+    assert output["registrar"] == "BELNET"
+    assert output["status"] == ["NOT AVAILABLE"]

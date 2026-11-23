@@ -1,8 +1,13 @@
 """Pytest fixture for the whois domain agent."""
 
+import io
 import json
 import pathlib
 import re
+import urllib.error
+import urllib.request
+from typing import Any
+from unittest import mock
 
 import pytest
 import whois
@@ -10,8 +15,12 @@ from ostorlab.agent import definitions as agent_definitions
 from ostorlab.agent.message import message
 from ostorlab.runtimes import definitions as runtime_definitions
 from ostorlab.utils import definitions
+from pytest_mock import plugin
 
-from agent import whois_domain_agent
+from agent import (
+    rdap,
+    whois_domain_agent,
+)
 
 WHOIS_ANSWERS = pathlib.Path(__file__).parent / "files"
 # The proton.me registry record's lines that the empty-values fixture blanks.
@@ -19,6 +28,14 @@ REGISTRY_LINES_TO_EMPTY = re.compile(
     r"^(Registrant Organization|Registrant Country|Name Server|DNSSEC):.*$",
     re.MULTILINE,
 )
+COM_RDAP_SERVER = "https://rdap.verisign.com/com/v1"
+# The saved RDAP answer served at each registry and registrar URL.
+RDAP_ANSWERS = {
+    f"{COM_RDAP_SERVER}/domain/arstechnica.com": "arstechnica.com.rdap.json",
+    "https://rdap.cscglobal.com/dbs/rdap-api/v1/domain/ARSTECHNICA.COM": "arstechnica.com.registrar.rdap.json",
+    f"{COM_RDAP_SERVER}/domain/techcrunch.com": "techcrunch.com.rdap.json",
+    "https://rdap.markmonitor.com/rdap/domain/TECHCRUNCH.COM": "techcrunch.com.registrar.rdap.json",
+}
 
 
 def _read_whois_answer(domain: str) -> str:
@@ -29,6 +46,21 @@ def _read_whois_answer(domain: str) -> str:
 def _load_whois_answer(domain: str) -> whois.parser.WhoisEntry:
     """Parses a saved WHOIS answer the way python-whois parses a live one."""
     return whois.parser.WhoisEntry.load(domain, _read_whois_answer(domain))
+
+
+def _load_rdap_answer(name: str) -> dict[str, Any]:
+    """Reads a saved RDAP answer."""
+    answer: dict[str, Any] = json.loads((WHOIS_ANSWERS / name).read_text())
+    return answer
+
+
+def _serve_rdap_answer(request: urllib.request.Request, timeout: int) -> io.BytesIO:
+    """Answers an RDAP lookup with the saved answer of its URL."""
+    del timeout
+    name = RDAP_ANSWERS.get(request.full_url)
+    if name is None:
+        raise urllib.error.URLError(f"no saved answer for {request.full_url}")
+    return io.BytesIO((WHOIS_ANSWERS / name).read_bytes())
 
 
 @pytest.fixture
@@ -82,6 +114,54 @@ def microsoft_com_whois() -> whois.parser.WhoisEntry:
 def cloudflare_com_whois() -> whois.parser.WhoisEntry:
     """The .com answer for cloudflare.com, whose registrar redacts the organisation."""
     return _load_whois_answer("cloudflare.com")
+
+
+@pytest.fixture
+def arstechnica_com_whois() -> whois.parser.WhoisEntry:
+    """The .com registry's answer for arstechnica.com, whose registrar's WHOIS server timed out."""
+    return _load_whois_answer("arstechnica.com")
+
+
+@pytest.fixture
+def arstechnica_com_rdap() -> dict[str, Any]:
+    """The .com registry's RDAP answer for arstechnica.com, linking to CSC's."""
+    return _load_rdap_answer("arstechnica.com.rdap.json")
+
+
+@pytest.fixture
+def arstechnica_com_registrar_rdap() -> dict[str, Any]:
+    """CSC's RDAP answer for arstechnica.com, publishing the registrant's org and country."""
+    return _load_rdap_answer("arstechnica.com.registrar.rdap.json")
+
+
+@pytest.fixture
+def techcrunch_com_rdap() -> dict[str, Any]:
+    """The .com registry's RDAP answer for techcrunch.com, linking to MarkMonitor's."""
+    return _load_rdap_answer("techcrunch.com.rdap.json")
+
+
+@pytest.fixture
+def techcrunch_com_registrar_rdap() -> dict[str, Any]:
+    """MarkMonitor's RDAP answer for techcrunch.com, publishing only the registrant's country."""
+    return _load_rdap_answer("techcrunch.com.registrar.rdap.json")
+
+
+@pytest.fixture
+def rdap_servers(mocker: plugin.MockerFixture) -> mock.MagicMock:
+    """Serves the saved .com registry and registrar RDAP answers in place of the network."""
+    mocker.patch.object(rdap, "_bootstrap", return_value={"com": COM_RDAP_SERVER})
+    urlopen: mock.MagicMock = mocker.patch(
+        "urllib.request.urlopen", side_effect=_serve_rdap_answer
+    )
+    return urlopen
+
+
+@pytest.fixture
+def arstechnica_message() -> message.Message:
+    """Creates a v3.asset.domain_name message for arstechnica.com."""
+    return message.Message.from_data(
+        "v3.asset.domain_name", data={"name": "arstechnica.com"}
+    )
 
 
 @pytest.fixture

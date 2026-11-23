@@ -2,8 +2,8 @@
 
 RDAP replaced WHOIS as the authoritative source of gTLD registration data, and
 answers with JSON instead of the free text WHOIS returns. It does not cover
-every TLD, and registries redact the registrant entity, so the caller still
-needs WHOIS for the registrant's organisation and country.
+every TLD, and many registries redact the registrant entity, so the registrant's
+organisation and country are read from the registrar's record the registry links to.
 """
 
 import http.client
@@ -28,6 +28,8 @@ EVENT_FIELDS = {
     "expiration": "expiration_date",
     "last changed": "updated_date",
 }
+# The media type a registry's link to the registrar's RDAP record carries.
+RDAP_MEDIA_TYPE = "application/rdap+json"
 
 
 _SERVERS: dict[str, str] = {}
@@ -101,9 +103,42 @@ def fetch(domain: str) -> dict[str, typing.Any] | None:
         logger.info("No RDAP server for .%s, relying on whois for %s", tld, domain)
         return None
 
-    request = urllib.request.Request(
-        f"{server}/domain/{hostname}", headers={"Accept": "application/rdap+json"}
-    )
+    return _lookup(f"{server}/domain/{hostname}", domain)
+
+
+def fetch_registrar(
+    response: dict[str, typing.Any], domain: str
+) -> dict[str, typing.Any] | None:
+    """Follow a registry's RDAP answer to the registrar's record of the domain.
+
+    Args:
+        response: The registry's RDAP answer.
+        domain: The domain the answer is about.
+
+    Returns:
+        The registrar's RDAP answer, None when the registry links none or the
+        lookup did not answer.
+    """
+    url = _registrar_link(response)
+    if url is None:
+        return None
+    return _lookup(url, domain)
+
+
+def _registrar_link(response: dict[str, typing.Any]) -> str | None:
+    """Return the https URL of the registrar's RDAP record the registry links to."""
+    for link in _dicts(response.get("links")):
+        href = link.get("href")
+        if link.get("rel") != "related" or link.get("type") != RDAP_MEDIA_TYPE:
+            continue
+        if isinstance(href, str) and href.startswith("https://"):
+            return href
+    return None
+
+
+def _lookup(url: str, domain: str) -> dict[str, typing.Any] | None:
+    """Return the RDAP answer at a URL, None when it did not answer with an object."""
+    request = urllib.request.Request(url, headers={"Accept": RDAP_MEDIA_TYPE})
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
             answer = json.load(response)
@@ -133,8 +168,19 @@ def _dicts(value: typing.Any) -> list[dict[str, typing.Any]]:
     return [item for item in value if isinstance(item, dict)]
 
 
-def _vcard(entity: dict[str, typing.Any], name: str) -> typing.Any:
-    """Read one property out of an entity's jCard.
+def _entity(response: dict[str, typing.Any], role: str) -> dict[str, typing.Any] | None:
+    """Return the first entity of a response that holds a role."""
+    for entity in _dicts(response.get("entities")):
+        roles = entity.get("roles")
+        if isinstance(roles, list) and role in roles:
+            return entity
+    return None
+
+
+def _vcard_property(
+    entity: dict[str, typing.Any], name: str
+) -> list[typing.Any] | None:
+    """Read one property out of an entity's jCard, with its parameters.
 
     A registry that redacts a property keeps it with an empty value, which
     reads the same as the property being absent.
@@ -150,15 +196,22 @@ def _vcard(entity: dict[str, typing.Any], name: str) -> typing.Any:
         if not isinstance(entry, list) or len(entry) < 4:
             continue
         if entry[0] == name and entry[3] != "":
-            return entry[3]
+            return entry
     return None
+
+
+def _vcard(entity: dict[str, typing.Any], name: str) -> typing.Any:
+    """Read the value of one property out of an entity's jCard."""
+    entry = _vcard_property(entity, name)
+    if entry is None:
+        return None
+    return entry[3]
 
 
 def parse(response: dict[str, typing.Any]) -> dict[str, typing.Any]:
     """Pull the registration records out of an RDAP response.
 
-    The registrant's organisation and country are deliberately absent: registries
-    redact that entity, so WHOIS remains the only source for them.
+    The registrant is left to parse_registrant.
 
     Args:
         response: An RDAP domain response.
@@ -168,14 +221,7 @@ def parse(response: dict[str, typing.Any]) -> dict[str, typing.Any]:
     """
     parsed: dict[str, typing.Any] = {}
 
-    registrar = next(
-        (
-            entity
-            for entity in _dicts(response.get("entities"))
-            if "registrar" in (entity.get("roles") or [])
-        ),
-        None,
-    )
+    registrar = _entity(response, "registrar")
     if registrar is not None:
         name = _vcard(registrar, "fn")
         if name is not None:
@@ -209,3 +255,64 @@ def parse(response: dict[str, typing.Any]) -> dict[str, typing.Any]:
             parsed["dnssec"] = [SIGNED if delegation_signed is True else UNSIGNED]
 
     return parsed
+
+
+def parse_registrant(response: dict[str, typing.Any]) -> dict[str, str]:
+    """Pull the registrant's organisation and country out of an RDAP answer.
+
+    Args:
+        response: A registrar's RDAP domain response.
+
+    Returns:
+        The organisation and country the answer publishes, redaction notices
+        included, named as the whois parser names them.
+    """
+    registrant = _entity(response, "registrant")
+    if registrant is None:
+        return {}
+
+    parsed: dict[str, str] = {}
+    org = _non_blank(_organisation(registrant))
+    if org is not None:
+        parsed["org"] = org
+    country = _non_blank(_country(registrant))
+    if country is not None:
+        parsed["country"] = country
+    return parsed
+
+
+def _organisation(entity: dict[str, typing.Any]) -> str | None:
+    """Return the organisation name of an entity, the first part of a structured one."""
+    org = _vcard(entity, "org")
+    if isinstance(org, list) and len(org) > 0:
+        org = org[0]
+    if not isinstance(org, str):
+        return None
+    return org
+
+
+def _country(entity: dict[str, typing.Any]) -> str | None:
+    """Return the country code of an entity's address, else the country it names."""
+    address = _vcard_property(entity, "adr")
+    if address is None:
+        return None
+
+    parameters = address[1]
+    code = parameters.get("cc") if isinstance(parameters, dict) else None
+    if isinstance(code, str) and code.strip() != "":
+        return code
+    # The country name is the last of an address's seven parts.
+    parts = address[3]
+    if isinstance(parts, list) and len(parts) >= 7 and isinstance(parts[6], str):
+        return parts[6]
+    return None
+
+
+def _non_blank(value: str | None) -> str | None:
+    """Return a value without surrounding blanks, None when nothing is left."""
+    if value is None:
+        return None
+    value = value.strip()
+    if value == "":
+        return None
+    return value

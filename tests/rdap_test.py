@@ -1,6 +1,8 @@
 """Unit tests for the RDAP lookups."""
 
+import http.client
 from typing import Any
+from unittest import mock
 
 import pytest
 from pytest_mock import plugin
@@ -296,3 +298,183 @@ def testRdapFetch_whenTheAnswerIsNotAnObject_returnsNone(
     mocker.patch("json.load", return_value=answer)
 
     assert rdap.fetch("ebay.com") is None
+
+
+def testRdapFetchRegistrar_whenTheRegistryLinksTheRegistrar_returnsItsAnswer(
+    techcrunch_com_rdap: dict[str, Any],
+    rdap_servers: mock.MagicMock,
+) -> None:
+    """Ensure that the registrar's RDAP record linked by the registry is looked up."""
+    answer = rdap.fetch_registrar(techcrunch_com_rdap, "techcrunch.com")
+
+    assert answer is not None
+    assert answer["port43"] == "whois.markmonitor.com"
+    assert (
+        rdap_servers.call_args.args[0].full_url
+        == "https://rdap.markmonitor.com/rdap/domain/TECHCRUNCH.COM"
+    )
+
+
+UNUSABLE_LINKS: list[Any] = [
+    None,
+    "https://rdap.markmonitor.com/rdap/domain/TECHCRUNCH.COM",
+    [],
+    [None],
+    [
+        {
+            "rel": "self",
+            "type": "application/rdap+json",
+            "href": "https://rdap.verisign.com/com/v1/domain/techcrunch.com",
+        }
+    ],
+    [{"rel": "related", "type": "text/html", "href": "https://www.markmonitor.com"}],
+    [
+        {
+            "rel": "related",
+            "type": "application/rdap+json",
+            "href": "http://rdap.markmonitor.com/rdap/domain/TECHCRUNCH.COM",
+        }
+    ],
+    [{"rel": "related", "type": "application/rdap+json"}],
+    [{"rel": "related", "type": "application/rdap+json", "href": None}],
+]
+
+
+@pytest.mark.parametrize("links", UNUSABLE_LINKS)
+def testRdapFetchRegistrar_whenTheRegistryLinksNoRegistrarRecord_returnsNone(
+    links: Any, mocker: plugin.MockerFixture
+) -> None:
+    """Ensure that only an https link to an RDAP record is followed."""
+    urlopen = mocker.patch("urllib.request.urlopen")
+
+    assert rdap.fetch_registrar({"links": links}, "techcrunch.com") is None
+    urlopen.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        OSError("timed out"),
+        ValueError("not JSON"),
+        http.client.HTTPException("bad status line"),
+    ],
+)
+def testRdapFetchRegistrar_whenTheRegistrarLookupFails_returnsNone(
+    error: Exception,
+    techcrunch_com_rdap: dict[str, Any],
+    mocker: plugin.MockerFixture,
+) -> None:
+    """Ensure that an unanswered registrar lookup is skipped rather than raising."""
+    mocker.patch("urllib.request.urlopen", side_effect=error)
+
+    assert rdap.fetch_registrar(techcrunch_com_rdap, "techcrunch.com") is None
+
+
+def testRdapParseRegistrant_whenTheRegistrarPublishesOrgAndCountry_readsBoth(
+    arstechnica_com_registrar_rdap: dict[str, Any],
+) -> None:
+    """Ensure that the registrant's org and country are read from the registrar."""
+    parsed = rdap.parse_registrant(arstechnica_com_registrar_rdap)
+
+    assert parsed == {"org": "Advance Magazine Publishers Inc.", "country": "US"}
+
+
+def testRdapParseRegistrant_whenTheRegistrarHidesTheOrg_readsOnlyTheCountry(
+    techcrunch_com_registrar_rdap: dict[str, Any],
+) -> None:
+    """Ensure that an org the registrar leaves out is not reported."""
+    parsed = rdap.parse_registrant(techcrunch_com_registrar_rdap)
+
+    assert parsed == {"country": "US"}
+
+
+def testRdapParseRegistrant_whenTheAnswerHasNoRegistrant_returnsNothing(
+    techcrunch_com_rdap: dict[str, Any],
+) -> None:
+    """Ensure that a registry answer, which carries no registrant, yields nothing."""
+    assert rdap.parse_registrant(techcrunch_com_rdap) == {}
+
+
+def _registrant(*properties: list[Any]) -> dict[str, Any]:
+    """Builds an RDAP answer whose registrant's jCard holds the given properties."""
+    return {
+        "entities": [
+            {
+                "roles": ["registrant"],
+                "vcardArray": ["vcard", [["version", {}, "text", "4.0"], *properties]],
+            }
+        ]
+    }
+
+
+@pytest.mark.parametrize(
+    "notice",
+    [
+        "REDACTED FOR PRIVACY",
+        "DATA REDACTED",
+        "Data Protected",
+        "<data not disclosed>",
+        "Domains By Proxy, LLC",
+    ],
+)
+def testRdapParseRegistrant_whenValuesAreNoticesOrProxies_keepsThemAsPublished(
+    notice: str,
+) -> None:
+    """Ensure that what the registrar publishes is reported, redaction notices and proxies included."""
+    parsed = rdap.parse_registrant(
+        _registrant(
+            ["org", {}, "text", notice],
+            ["adr", {"cc": notice}, "text", ["", "", "", "", "", "", ""]],
+        )
+    )
+
+    assert parsed == {"org": notice, "country": notice}
+
+
+def testRdapParseRegistrant_whenValuesAreBlank_leavesThemOut() -> None:
+    """Ensure that an org or country emptied by the registrar is treated as absent."""
+    parsed = rdap.parse_registrant(
+        _registrant(
+            ["org", {}, "text", "   "],
+            ["adr", {"cc": " "}, "text", ["", "", "", "", "", "", "  "]],
+        )
+    )
+
+    assert parsed == {}
+
+
+def testRdapParseRegistrant_whenTheAddressHasNoCc_readsItsCountryPart() -> None:
+    """Ensure that the country part of the address stands in for a missing cc."""
+    parsed = rdap.parse_registrant(
+        _registrant(["adr", {}, "text", ["", "", "", "", "", "", "Switzerland"]])
+    )
+
+    assert parsed == {"country": "Switzerland"}
+
+
+def testRdapParseRegistrant_whenTheOrgIsStructured_readsItsName() -> None:
+    """Ensure that an org with units reports the organisation's name."""
+    parsed = rdap.parse_registrant(
+        _registrant(["org", {}, "text", ["Proton AG", "Legal"]])
+    )
+
+    assert parsed == {"org": "Proton AG"}
+
+
+@pytest.mark.parametrize(
+    "properties",
+    [
+        [["org", {}, "text", None]],
+        [["org", {}, "text", []]],
+        [["org", {}, "text", [3]]],
+        [["adr", None, "text", None]],
+        [["adr", {"cc": 3}, "text", "Paris"]],
+        [["adr", {}, "text", ["", ""]]],
+        [["adr", {}, "text", ["", "", "", "", "", "", ["FR"]]]],
+    ],
+)
+def testRdapParseRegistrant_whenTheJcardIsMalformed_readsItAsEmpty(
+    properties: list[list[Any]],
+) -> None:
+    """Ensure that no registrant shape a registrar can send escapes as an exception."""
+    assert rdap.parse_registrant(_registrant(*properties)) == {}

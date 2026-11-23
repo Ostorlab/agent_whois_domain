@@ -82,7 +82,14 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
             if whois_output is None and rdap_response is None:
                 return
 
-            self._emit_result(domain_object.fld, whois_output, rdap_response)
+            registrar_response = None
+            if rdap_response is not None:
+                registrar_response = rdap.fetch_registrar(
+                    rdap_response, domain_object.fld
+                )
+            self._emit_result(
+                domain_object.fld, whois_output, rdap_response, registrar_response
+            )
         else:
             logger.error("domain is not a valid URL: %s", domain)
 
@@ -131,34 +138,46 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
         domain: str,
         whois_output: whois.parser.WhoisCom | None,
         rdap_response: dict[str, Any] | None,
+        registrar_response: dict[str, Any] | None,
     ) -> None:
         """Emit the registration records of a domain.
 
         RDAP answers for the records it carries and whois for the rest, so a TLD
-        without RDAP and a lookup that did not answer both keep today's result,
-        and the registrant's organisation and country keep coming from whois.
+        without RDAP and a lookup that did not answer both keep today's result.
+        The registrant's organisation and country come from whois, else from the
+        registrar's RDAP record.
 
         Args:
             domain: The domain that was looked up.
             whois_output: The whois result, None when the lookup did not answer.
-            rdap_response: The RDAP response, None when there is none to use.
+            rdap_response: The registry's RDAP response, None when there is none to use.
+            registrar_response: The registrar's RDAP response, None when there is none to use.
         """
         logger.info("emitting results for %s", domain)
         rdap_fields = {} if rdap_response is None else rdap.parse(rdap_response)
+        registrant = (
+            {}
+            if registrar_response is None
+            else rdap.parse_registrant(registrar_response)
+        )
         outputs = (
             []
             if whois_output is None
             else list(result_parser.parse_results(whois_output))
         )
         if len(outputs) == 0:
-            if len(rdap_fields) == 0:
+            if len(rdap_fields) == 0 and len(registrant) == 0:
                 return
             # whois did not answer, so the domain is the only field it would
             # have carried.
             outputs = [{"name": domain}]
 
         for output in outputs:
-            self.emit(selector=LIB_SELECTOR, data={**output, **rdap_fields})
+            data = {**output, **rdap_fields}
+            for field, value in registrant.items():
+                if data.get(field) is None or data.get(field) == "":
+                    data[field] = value
+            self.emit(selector=LIB_SELECTOR, data=data)
 
 
 if __name__ == "__main__":

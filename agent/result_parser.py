@@ -20,6 +20,10 @@ OPTIONAL_FIELDS = [
 # The keys TLD parsers store the registrant's organisation and country under, preferred first.
 ORG_FIELDS = ["org", "registrant_org", "registrant_organization"]
 COUNTRY_FIELDS = ["country", "registrant_country"]
+# The .au parser stores the registrant, the organisation holding the domain, as its name.
+AU_ORG_FIELDS = [*ORG_FIELDS, "registrant_name"]
+# The .be parser reads the registrar's technical contact as the registrant.
+BE_CONTACT_FIELDS = ["org", "name"]
 
 UNDISCLOSED_VALUE = "<data not disclosed>"
 
@@ -31,6 +35,20 @@ NAME_SERVER_LINE = re.compile(r"^Name Server:(.*)$", re.IGNORECASE | re.MULTILIN
 DNSSEC_LINE = re.compile(r"^DNSSEC:(.*)$", re.IGNORECASE | re.MULTILINE)
 # The ICANN link written after an EPP status code.
 STATUS_LINK = re.compile(r"\s+\(?https?://\S*$")
+DOMAIN_STATUS_LINE = re.compile(
+    r"^\s*(?:Domain )?Status:(.*)$", re.IGNORECASE | re.MULTILINE
+)
+NAME_SERVER_STATUS_LINE = re.compile(
+    r"^\s*Name Server Status:(.*)$", re.IGNORECASE | re.MULTILINE
+)
+# DNS Belgium lists each name server on an indented line, its address in parentheses after it.
+BE_NAME_SERVERS_BLOCK = re.compile(
+    r"^Nameservers:[ \t]*\r?\n((?:[ \t]+\S[^\r\n]*(?:\r?\n|$))+)", re.MULTILINE
+)
+BE_REGISTRAR_NAME = re.compile(
+    r"^Registrar:[ \t]*\r?\n[ \t]+Name:[ \t]*([^\r\n]*)", re.MULTILINE
+)
+HOSTNAME_LABEL = re.compile(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", re.IGNORECASE)
 
 
 def parse_results(results: whois.parser.WhoisCom) -> Iterator[dict[str, Any]]:
@@ -43,7 +61,13 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[dict[str, Any]]:
        The parsed output of the whois_domain scan results.
     """
     scan_output_dict = dict(results)
+    raw_text = _raw_text(results)
     registry_record = _registry_record(results)
+    org_fields = ORG_FIELDS
+    if isinstance(results, whois.parser.WhoisAU):
+        org_fields = AU_ORG_FIELDS
+    if isinstance(results, whois.parser.WhoisBe):
+        scan_output_dict = _dns_belgium_fields(scan_output_dict, raw_text)
     names = set()
     for name in get_list_from_string(scan_output_dict.pop("domain_name", "")):
         if name is not None:
@@ -65,7 +89,10 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[dict[str, Any]]:
                 "name": name,
                 "emails": [email for email in found_emails if _is_valid_email(email)],
                 "status": _status_codes(
-                    get_list_from_string(scan_output_dict.get("status", ""))
+                    _domain_statuses(
+                        get_list_from_string(scan_output_dict.get("status", "")),
+                        raw_text,
+                    )
                 ),
                 "name_servers": _normalize_name_servers(
                     _name_servers(scan_output_dict, registry_record)
@@ -73,7 +100,7 @@ def parse_results(results: whois.parser.WhoisCom) -> Iterator[dict[str, Any]]:
                 "contact_names": get_list_from_string(scan_output_dict.get("name", "")),
                 "dnssec": _dnssec(scan_output_dict, registry_record),
                 "org": _registrant_value(
-                    scan_output_dict, ORG_FIELDS, registry_record, ORG_LINE
+                    scan_output_dict, org_fields, registry_record, ORG_LINE
                 ),
                 "country": _registrant_value(
                     scan_output_dict, COUNTRY_FIELDS, registry_record, COUNTRY_LINE
@@ -129,12 +156,35 @@ def get_list_from_string(scan_output_value: str | list[str]) -> list[str]:
         return scan_output_value or []
 
 
-def _registry_record(results: whois.parser.WhoisCom) -> str:
-    """Returns the registry's record from the raw answer, without the registrar's referral."""
+def _raw_text(results: whois.parser.WhoisCom) -> str:
+    """Returns the raw answer, the registrar's referral included."""
     if not isinstance(results, whois.parser.WhoisEntry):
         return ""
     raw_text: str = results.text
-    return REGISTRY_RECORD_END.split(raw_text, maxsplit=1)[0]
+    return raw_text
+
+
+def _registry_record(results: whois.parser.WhoisCom) -> str:
+    """Returns the registry's record from the raw answer, without the registrar's referral."""
+    return REGISTRY_RECORD_END.split(_raw_text(results), maxsplit=1)[0]
+
+
+def _dns_belgium_fields(scan_output: dict[str, Any], raw_text: str) -> dict[str, Any]:
+    """Returns the .be fields without the technical contact, with the raw answer's name servers and registrar."""
+    fields = {
+        field: value
+        for field, value in scan_output.items()
+        if field not in BE_CONTACT_FIELDS
+    }
+    name_servers = BE_NAME_SERVERS_BLOCK.search(raw_text)
+    if name_servers is not None:
+        fields["name_servers"] = [
+            line.split()[0] for line in name_servers.group(1).splitlines()
+        ]
+    registrar = BE_REGISTRAR_NAME.search(raw_text)
+    if registrar is not None and registrar.group(1).strip() != "":
+        fields["registrar"] = registrar.group(1).strip()
+    return fields
 
 
 def _registry_values(registry_record: str, line: re.Pattern[str]) -> list[str]:
@@ -179,6 +229,14 @@ def _dnssec(scan_output: dict[str, Any], registry_record: str) -> list[str]:
     return _registry_values(registry_record, DNSSEC_LINE)
 
 
+def _domain_statuses(statuses: list[str], raw_text: str) -> list[str]:
+    """Returns the statuses without those found only on a "Name Server Status" line."""
+    name_server_only = set(_registry_values(raw_text, NAME_SERVER_STATUS_LINE)) - set(
+        _registry_values(raw_text, DOMAIN_STATUS_LINE)
+    )
+    return [status for status in statuses if status not in name_server_only]
+
+
 def _status_codes(statuses: list[str]) -> list[str]:
     """Returns each status code once, in first-seen order, without its ICANN link."""
     codes = [STATUS_LINK.sub("", status) for status in statuses]
@@ -186,8 +244,26 @@ def _status_codes(statuses: list[str]) -> list[str]:
 
 
 def _normalize_name_servers(name_servers: list[str]) -> list[str]:
-    """Normalizes name servers to lowercase and removes duplicates."""
-    return list({ns.lower() for ns in name_servers})
+    """Returns the hostnames the name server values hold, lowercase, once each and sorted.
+
+    A parser may join several servers, or a server and its addresses, in one value.
+    """
+    return sorted(
+        {
+            word.lower()
+            for name_server in name_servers
+            for word in name_server.split()
+            if _is_hostname(word)
+        }
+    )
+
+
+def _is_hostname(value: str) -> bool:
+    """Tells whether a value is a hostname of two labels or more, a trailing dot allowed."""
+    labels = value.removesuffix(".").split(".")
+    if len(labels) < 2 or labels[-1].isdigit() is True:
+        return False
+    return all(HOSTNAME_LABEL.fullmatch(label) is not None for label in labels)
 
 
 def _format_str(value: str | list[str]) -> str:

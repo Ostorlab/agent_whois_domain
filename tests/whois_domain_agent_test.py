@@ -2,6 +2,7 @@
 
 import datetime
 from typing import Any
+from unittest import mock
 
 import pytest
 import whois
@@ -762,3 +763,304 @@ def testAgentWhois_whenMeDomainHasNoRdap_shouldEmitTheRegistryRecord(
         "clientUpdateProhibited",
         "serverUpdateProhibited",
     ]
+
+
+def testAgentWhois_whenTheRegistrarWhoisTimesOut_emitsTheRegistrantFromTheRegistrarRdap(
+    arstechnica_message: message.Message,
+    arstechnica_com_whois: whois.parser.WhoisEntry,
+    rdap_servers: mock.MagicMock,
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """Ensure that the registrar's RDAP record stands in for its silent WHOIS server."""
+    del agent_persist_mock
+    mocker.patch("whois.whois", return_value=arstechnica_com_whois)
+
+    test_agent.start()
+    test_agent.process(arstechnica_message)
+
+    assert len(agent_mock) == 1
+    emitted = agent_mock[0].data
+    assert emitted["org"] == "Advance Magazine Publishers Inc."
+    assert emitted["country"] == "US"
+    assert emitted["registrar"] == "CSC Corporate Domains, Inc."
+    assert [call.args[0].full_url for call in rdap_servers.call_args_list] == [
+        "https://rdap.verisign.com/com/v1/domain/arstechnica.com",
+        "https://rdap.cscglobal.com/dbs/rdap-api/v1/domain/ARSTECHNICA.COM",
+    ]
+
+
+def testAgentWhois_whenWhoisHasTheRegistrant_keepsItWithoutFetchingTheRegistrarRdap(
+    arstechnica_message: message.Message,
+    rdap_servers: mock.MagicMock,
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """Ensure that whois keeps the registrant's org and country and the registrar is not asked."""
+    del agent_persist_mock
+    mocker.patch(
+        "whois.whois", return_value={**SCAN_OUTPUT, "domain_name": "arstechnica.com"}
+    )
+
+    test_agent.start()
+    test_agent.process(arstechnica_message)
+
+    assert len(agent_mock) == 1
+    assert agent_mock[0].data["org"] == "Contact Privacy Inc. Customer 0139267634"
+    assert agent_mock[0].data["country"] == "CA"
+    assert [call.args[0].full_url for call in rdap_servers.call_args_list] == [
+        "https://rdap.verisign.com/com/v1/domain/arstechnica.com",
+    ]
+
+
+def testAgentWhois_whenWhoisHasOnlyTheOrg_takesTheCountryFromTheRegistrarRdap(
+    arstechnica_message: message.Message,
+    rdap_servers: mock.MagicMock,
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """Ensure that each registrant field missing from whois is filled on its own."""
+    del agent_persist_mock, rdap_servers
+    mocker.patch(
+        "whois.whois",
+        return_value={
+            "domain_name": "arstechnica.com",
+            "org": "Condé Nast",
+        },
+    )
+
+    test_agent.start()
+    test_agent.process(arstechnica_message)
+
+    assert len(agent_mock) == 1
+    assert agent_mock[0].data["org"] == "Condé Nast"
+    assert agent_mock[0].data["country"] == "US"
+
+
+def testAgentWhois_whenTheRegistrarRdapHidesTheOrg_emitsOnlyTheCountry(
+    rdap_servers: mock.MagicMock,
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """Ensure that a registrant org the registrar leaves empty stays absent."""
+    del agent_persist_mock, rdap_servers
+    mocker.patch("whois.whois", return_value={"domain_name": "techcrunch.com"})
+
+    test_agent.start()
+    test_agent.process(
+        message.Message.from_data(
+            "v3.asset.domain_name", data={"name": "techcrunch.com"}
+        )
+    )
+
+    assert len(agent_mock) == 1
+    assert agent_mock[0].data.get("org") is None
+    assert agent_mock[0].data["country"] == "US"
+
+
+def testAgentWhois_whenTheRegistrarRdapFails_emitsWhatWhoisAndTheRegistryReport(
+    arstechnica_message: message.Message,
+    arstechnica_com_whois: whois.parser.WhoisEntry,
+    arstechnica_com_rdap: dict[str, Any],
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """Ensure that a registrar lookup that does not answer keeps the result."""
+    del agent_persist_mock
+    mocker.patch("whois.whois", return_value=arstechnica_com_whois)
+    mocker.patch.object(rdap, "fetch", return_value=arstechnica_com_rdap)
+    mocker.patch("urllib.request.urlopen", side_effect=TimeoutError("timed out"))
+
+    test_agent.start()
+    test_agent.process(arstechnica_message)
+
+    assert len(agent_mock) == 1
+    emitted = agent_mock[0].data
+    assert emitted["registrar"] == "CSC Corporate Domains, Inc."
+    assert emitted.get("org") is None
+    assert emitted.get("country") is None
+
+
+def testAgentWhois_whenWhoisFailsAndBothRdapRecordsAnswer_emitsTheRegistrant(
+    arstechnica_message: message.Message,
+    rdap_servers: mock.MagicMock,
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """Ensure that the registrant is reported from RDAP alone."""
+    del agent_persist_mock, rdap_servers
+    mocker.patch(
+        "whois.whois", side_effect=whois_exceptions.WhoisCommandFailedError("no output")
+    )
+
+    test_agent.start()
+    test_agent.process(arstechnica_message)
+
+    assert len(agent_mock) == 1
+    emitted = agent_mock[0].data
+    assert emitted["name"] == "arstechnica.com"
+    assert emitted["org"] == "Advance Magazine Publishers Inc."
+    assert emitted["country"] == "US"
+
+
+def testAgentWhois_whenOnlyTheRegistryPublishesTheRegistrant_emitsIt(
+    lemonde_fr_rdap: dict[str, Any],
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """Ensure that a registry's own registrant fills what whois did not give."""
+    del agent_persist_mock
+    mocker.patch("whois.whois", return_value={"domain_name": "lemonde.fr"})
+    mocker.patch.object(rdap, "fetch", return_value=lemonde_fr_rdap)
+
+    test_agent.start()
+    test_agent.process(
+        message.Message.from_data("v3.asset.domain_name", data={"name": "lemonde.fr"})
+    )
+
+    assert len(agent_mock) == 1
+    assert agent_mock[0].data["org"] == "SOCIETE EDITRICE DU MONDE"
+    assert agent_mock[0].data["country"] == "FR"
+
+
+def _registrant_answer(**vcard: str) -> dict[str, Any]:
+    """Builds an RDAP answer whose registrant publishes the given org and cc."""
+    properties: list[Any] = [["version", {}, "text", "4.0"]]
+    if "org" in vcard:
+        properties.append(["org", {}, "text", vcard["org"]])
+    if "cc" in vcard:
+        properties.append(["adr", {"cc": vcard["cc"]}, "text", [""] * 7])
+    return {
+        "entities": [{"roles": ["registrant"], "vcardArray": ["vcard", properties]}]
+    }
+
+
+def testAgentWhois_whenRegistryAndRegistrarPublishTheRegistrant_prefersTheRegistrar(
+    scan_message: message.Message,
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """Ensure that the registrar's values win, the registry's filling what it lacks."""
+    del agent_persist_mock
+    mocker.patch("whois.whois", return_value={"domain_name": "medallia.com"})
+    mocker.patch.object(
+        rdap, "fetch", return_value=_registrant_answer(org="Registry Org", cc="FR")
+    )
+    mocker.patch.object(
+        rdap, "fetch_registrar", return_value=_registrant_answer(org="Registrar Org")
+    )
+
+    test_agent.start()
+    test_agent.process(scan_message)
+
+    assert len(agent_mock) == 1
+    assert agent_mock[0].data["org"] == "Registrar Org"
+    assert agent_mock[0].data["country"] == "FR"
+
+
+def testAgentWhois_whenTheRegistrarPublishesARedactionNotice_emitsItAsPublished(
+    scan_message: message.Message,
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """Ensure that a redaction notice the registrar publishes is reported as is."""
+    del agent_persist_mock
+    mocker.patch("whois.whois", return_value={"domain_name": "medallia.com"})
+    mocker.patch.object(rdap, "fetch", return_value=RDAP_RESPONSE)
+    mocker.patch.object(
+        rdap,
+        "fetch_registrar",
+        return_value=_registrant_answer(org="REDACTED FOR PRIVACY", cc="US"),
+    )
+
+    test_agent.start()
+    test_agent.process(scan_message)
+
+    assert len(agent_mock) == 1
+    assert agent_mock[0].data["org"] == "REDACTED FOR PRIVACY"
+    assert agent_mock[0].data["country"] == "US"
+
+
+def testAgentWhois_always_identifiesItselfToRdapServersWithItsVersion(
+    arstechnica_message: message.Message,
+    arstechnica_com_whois: whois.parser.WhoisEntry,
+    rdap_servers: mock.MagicMock,
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """Ensure that the registry and registrar lookups carry the agent's User-Agent."""
+    del agent_persist_mock
+    mocker.patch("whois.whois", return_value=arstechnica_com_whois)
+
+    user_agent = f"{whois_domain_agent.USER_AGENT}/{test_agent.definition.version}"
+
+    test_agent.start()
+    test_agent.process(arstechnica_message)
+
+    assert [
+        call.args[0].get_header("User-agent") for call in rdap_servers.call_args_list
+    ] == [user_agent] * 2
+    assert len(agent_mock) == 1
+
+
+def testAgentWhois_whenAnIdnArrivesInBothSpellings_looksItUpOnce(
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """Ensure that the unicode and ASCII forms of a domain share one lookup."""
+    del agent_persist_mock
+    mock_whois = mocker.patch(
+        "whois.whois", return_value={"domain_name": "xn--bcher-kva.com"}
+    )
+
+    test_agent.start()
+    for name in ("bücher.com", "xn--bcher-kva.com"):
+        test_agent.process(
+            message.Message.from_data("v3.asset.domain_name", data={"name": name})
+        )
+
+    mock_whois.assert_called_once()
+    assert len(agent_mock) == 1
+
+
+def testAgentWhois_whenItReceivesAWhoisMessage_skipsIt(
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+) -> None:
+    """Ensure that the agent does not look up the domains of its own output again."""
+    del agent_persist_mock
+    mock_whois = mocker.patch("whois.whois", return_value=SCAN_OUTPUT)
+
+    test_agent.start()
+    test_agent.process(
+        message.Message.from_data(
+            "v3.asset.domain_name.whois", data={"name": "xn--bcher-kva.com"}
+        )
+    )
+
+    mock_whois.assert_not_called()
+    assert len(agent_mock) == 0

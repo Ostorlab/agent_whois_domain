@@ -1,0 +1,22 @@
+Domain name: nos.nl
+Status:      active
+
+Registrar:
+   NPO
+   Bart de Graaffweg 2
+   1217ZL Hilversum
+   Netherlands
+
+DNSSEC:      yes
+
+Domain nameservers:
+   ns-311.awsdns-38.com
+   ns-823.awsdns-38.net
+   ns-1511.awsdns-60.org
+   ns-1582.awsdns-05.co.uk
+
+Creation Date: 1995-05-17
+
+Updated Date: 2025-12-29
+
+Record maintained by: SIDN BV

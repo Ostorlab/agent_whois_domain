@@ -277,3 +277,116 @@ def testParseResults_whenFieldsAreMissing_shouldReturnEmptyLists() -> None:
     assert output["dnssec"] == []
     assert output["status"] == []
     assert output["name_servers"] == []
+
+
+def testParseResults_whenBeAnswer_shouldNotReportTheTechnicalContactAsTheRegistrant(
+    rtbf_be_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that the .be registrar's technical contact is not returned as the org."""
+    output = next(result_parser.parse_results(rtbf_be_whois))
+
+    assert output["org"] is None
+    assert output["contact_names"] == []
+
+
+def testParseResults_whenBeAnswer_shouldReturnEachNameServerAndTheRegistrar(
+    rtbf_be_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that the .be name servers block and registrar name are read."""
+    output = next(result_parser.parse_results(rtbf_be_whois))
+
+    assert output["name_servers"] == [
+        "ns1.belnet.be",
+        "ns1.rtbf.be",
+        "ns2.belnet.be",
+        "ns2.rtbf.be",
+        "ns3.belnet.be",
+    ]
+    assert output["registrar"] == "BELNET"
+    assert output["status"] == ["NOT AVAILABLE"]
+
+
+def testParseResults_whenNlParserReadsOtherWordsAsNameServers_shouldKeepOnlyHostnames(
+    nos_nl_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that only hostnames are returned as name servers, sorted."""
+    output = next(result_parser.parse_results(nos_nl_whois))
+
+    assert output["name_servers"] == [
+        "ns-1511.awsdns-60.org",
+        "ns-1582.awsdns-05.co.uk",
+        "ns-311.awsdns-38.com",
+        "ns-823.awsdns-38.net",
+    ]
+
+
+def testParseResults_whenNameServersCarryAddressesOrDots_shouldKeepEachHostname() -> (
+    None
+):
+    """Ensure that joined values give each hostname, without the addresses and words around them."""
+    scan_output = {
+        "domain_name": "example.com",
+        "name_servers": [
+            "ns2.example.com 192.0.2.1 2001:db8::1",
+            "ns1.example.com.\n\tns3.example.com (192.0.2.3)",
+            "Creation",
+            "",
+            "192.0.2.4",
+        ],
+    }
+
+    output = next(result_parser.parse_results(scan_output))
+
+    assert output["name_servers"] == [
+        "ns1.example.com.",
+        "ns2.example.com",
+        "ns3.example.com",
+    ]
+
+
+def testParseResults_whenAuParserUsesRegistrantName_shouldReturnItAsTheOrg(
+    abc_net_au_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that the .au registrant is returned as org."""
+    output = next(result_parser.parse_results(abc_net_au_whois))
+
+    assert output["org"] == "AUSTRALIAN BROADCASTING CORPORATION"
+
+
+def testParseResults_whenOtherParserUsesRegistrantName_shouldNotReturnItAsTheOrg() -> (
+    None
+):
+    """Ensure that a registrant_name outside .au, a person's name, is not returned as org."""
+    output = next(
+        result_parser.parse_results(
+            {"domain_name": "example.com", "registrant_name": "Jane Doe"}
+        )
+    )
+
+    assert output["org"] is None
+
+
+def testParseResults_whenNameServerStatusLine_shouldNotReturnItAsADomainStatus(
+    microsoft_com_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that "Name Server Status: active" is not returned as a domain status."""
+    output = next(result_parser.parse_results(microsoft_com_whois))
+
+    assert "active" not in output["status"]
+    assert output["status"] == [
+        "clientDeleteProhibited",
+        "clientTransferProhibited",
+        "clientUpdateProhibited",
+        "serverDeleteProhibited",
+        "serverTransferProhibited",
+        "serverUpdateProhibited",
+    ]
+
+
+def testParseResults_whenTheDomainStatusIsActive_shouldKeepIt(
+    nos_nl_whois: whois.parser.WhoisEntry,
+) -> None:
+    """Ensure that a domain whose own status line reads active keeps it."""
+    output = next(result_parser.parse_results(nos_nl_whois))
+
+    assert output["status"] == ["active"]

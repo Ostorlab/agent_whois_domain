@@ -32,6 +32,10 @@ logger = logging.getLogger(__name__)
 LIB_SELECTOR = "v3.asset.domain_name.whois"
 WAIT_TIME = 10
 RETRY_NUMBER = 3
+# Sent to RDAP servers, some of which refuse urllib's own User-Agent.
+USER_AGENT = "ostorlab-agent-whois-domain"
+# The whois fields the registrar's RDAP record fills when whois leaves them empty.
+REGISTRANT_FIELDS = ["org", "country"]
 
 
 class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
@@ -45,6 +49,8 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
         agent.Agent.__init__(self, agent_definition, agent_settings)
         persist_mixin.AgentPersistMixin.__init__(self, agent_settings)
         self._scope_domain_regex: str | None = self.args.get("scope_domain_regex")
+        version = agent_definition.version
+        self._user_agent = USER_AGENT if version is None else f"{USER_AGENT}/{version}"
 
     def process(self, message: msg.Message) -> None:
         """Starts a whois scan, wait for the scan to finish,
@@ -53,6 +59,8 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
         Args:
             message:  The message to process from ostorlab runtime.
         """
+        if message.selector == LIB_SELECTOR:
+            return
         domain = message.data.get("name")
         if domain is None or domain == "":
             return
@@ -64,7 +72,10 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
 
         if domain_object is not None:
             logger.info("Processing message of selector : %s.", message.selector)
-            if self.set_add("agent_whois_domain_asset", domain_object.fld) is False:
+            if (
+                self.set_add("agent_whois_domain_asset", _a_label(domain_object.fld))
+                is False
+            ):
                 logger.info(
                     "target %s was processed before, exiting", domain_object.fld
                 )
@@ -78,11 +89,23 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
             except whois_exceptions.PywhoisError as e:
                 logger.error(e)
 
-            rdap_response = rdap.fetch(domain_object.fld)
+            rdap_response = rdap.fetch(domain_object.fld, self._user_agent)
             if whois_output is None and rdap_response is None:
                 return
 
-            self._emit_result(domain_object.fld, whois_output, rdap_response)
+            whois_records = (
+                []
+                if whois_output is None
+                else list(result_parser.parse_results(whois_output))
+            )
+            registrar_response = None
+            if rdap_response is not None and _lacks_registrant(whois_records) is True:
+                registrar_response = rdap.fetch_registrar(
+                    rdap_response, domain_object.fld, self._user_agent
+                )
+            self._emit_result(
+                domain_object.fld, whois_records, rdap_response, registrar_response
+            )
         else:
             logger.error("domain is not a valid URL: %s", domain)
 
@@ -129,36 +152,64 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
     def _emit_result(
         self,
         domain: str,
-        whois_output: whois.parser.WhoisCom | None,
+        whois_records: list[dict[str, Any]],
         rdap_response: dict[str, Any] | None,
+        registrar_response: dict[str, Any] | None,
     ) -> None:
         """Emit the registration records of a domain.
 
         RDAP answers for the records it carries and whois for the rest, so a TLD
-        without RDAP and a lookup that did not answer both keep today's result,
-        and the registrant's organisation and country keep coming from whois.
+        without RDAP and a lookup that did not answer both keep today's result.
+        The registrant's organisation and country come from whois, else from the
+        registrar's RDAP record, else from the registry's.
 
         Args:
             domain: The domain that was looked up.
-            whois_output: The whois result, None when the lookup did not answer.
-            rdap_response: The RDAP response, None when there is none to use.
+            whois_records: The parsed whois records, empty when there are none.
+            rdap_response: The registry's RDAP response, None when there is none to use.
+            registrar_response: The registrar's RDAP response, None when there is none to use.
         """
         logger.info("emitting results for %s", domain)
         rdap_fields = {} if rdap_response is None else rdap.parse(rdap_response)
-        outputs = (
-            []
-            if whois_output is None
-            else list(result_parser.parse_results(whois_output))
-        )
+        registrant: dict[str, str] = {}
+        # The registrar's answer is read last, so its values win over the registry's.
+        for response in (rdap_response, registrar_response):
+            if response is not None:
+                registrant.update(rdap.parse_registrant(response))
+        outputs = whois_records
         if len(outputs) == 0:
-            if len(rdap_fields) == 0:
+            if len(rdap_fields) == 0 and len(registrant) == 0:
                 return
             # whois did not answer, so the domain is the only field it would
             # have carried.
             outputs = [{"name": domain}]
 
         for output in outputs:
-            self.emit(selector=LIB_SELECTOR, data={**output, **rdap_fields})
+            data = {**output, **rdap_fields}
+            for field, value in registrant.items():
+                if data.get(field) is None or data.get(field) == "":
+                    data[field] = value
+            self.emit(selector=LIB_SELECTOR, data=data)
+
+
+def _lacks_registrant(whois_records: list[dict[str, Any]]) -> bool:
+    """Return whether whois left the registrant's org or country of a record empty."""
+    if len(whois_records) == 0:
+        return True
+    for record in whois_records:
+        for field in REGISTRANT_FIELDS:
+            value = record.get(field)
+            if value is None or value == "":
+                return True
+    return False
+
+
+def _a_label(domain: str) -> str:
+    """Return the ASCII form of a domain, so both spellings of an IDN are looked up once."""
+    try:
+        return domain.encode("idna").decode("ascii").lower()
+    except UnicodeError:
+        return domain
 
 
 if __name__ == "__main__":

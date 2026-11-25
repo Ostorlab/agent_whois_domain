@@ -1,5 +1,6 @@
 """Whois Domain Agent: Agent responsible for retrieving WHOIS information of a domain."""
 
+import ipaddress
 import logging
 import re
 import socket
@@ -38,6 +39,15 @@ USER_AGENT = "ostorlab-agent-whois-domain"
 REGISTRANT_FIELDS = ["org", "country"]
 
 
+def _is_ip_address(name: str) -> bool:
+    """Check if a name is an IPv4 or IPv6 address, like the name of PTR record evidence."""
+    try:
+        ipaddress.ip_address(name)
+    except ValueError:
+        return False
+    return True
+
+
 class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
     """Whois domain scanner implementation for ostorlab. using ostorlab python sdk."""
 
@@ -63,6 +73,9 @@ class AgentWhoisDomain(agent.Agent, persist_mixin.AgentPersistMixin):
             return
         domain = message.data.get("name")
         if domain is None or domain == "":
+            return
+        if _is_ip_address(domain) is True:
+            logger.debug("skipping %s, it is an IP address, not a domain", domain)
             return
 
         domain_object = cast(

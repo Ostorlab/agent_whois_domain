@@ -1,6 +1,7 @@
 """Unittests for whois_domain agent."""
 
 import datetime
+import logging
 from typing import Any
 from unittest import mock
 
@@ -1064,3 +1065,45 @@ def testAgentWhois_whenItReceivesAWhoisMessage_skipsIt(
 
     mock_whois.assert_not_called()
     assert len(agent_mock) == 0
+
+
+@pytest.mark.parametrize("ip", ["1.1.1.1", "2606:4700:4700::1001"])
+def testAgentWhois_whenNameIsAnIP_skipsItWithoutLoggingAnError(
+    ip: str,
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    mocker: plugin.MockerFixture,
+    agent_mock: list[message.Message],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """PTR evidence names the IP it was resolved from, which has no domain whois to look up."""
+    del agent_persist_mock
+    mock_whois = mocker.patch("whois.whois", return_value=SCAN_OUTPUT)
+
+    test_agent.start()
+    test_agent.process(
+        message.Message.from_data(
+            "v3.asset.domain_name.dns_record",
+            data={"name": ip, "record": "ptr", "values": ["one.one.one.one"]},
+        )
+    )
+
+    mock_whois.assert_not_called()
+    assert len(agent_mock) == 0
+    assert all(record.levelno < logging.ERROR for record in caplog.records)
+
+
+def testAgentWhois_whenNameIsNotAValidDomain_logsAnError(
+    test_agent: whois_domain_agent.AgentWhoisDomain,
+    agent_persist_mock: Any,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A name that is neither a domain nor an IP is still reported."""
+    del agent_persist_mock
+
+    test_agent.start()
+    test_agent.process(
+        message.Message.from_data("v3.asset.domain_name", data={"name": "not_a_domain"})
+    )
+
+    assert "domain is not a valid URL: not_a_domain" in caplog.text
